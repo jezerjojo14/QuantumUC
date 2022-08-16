@@ -67,7 +67,7 @@ def get_cos_expression(n, no_terms):
 
     # no_terms=int(input("Enter number of terms for cos Taylor expansion: "))
 
-    x_expansion=[[-np.pi*(2*np.pi)/2**n, []]]
+    x_expansion=[[-np.pi, []]]
     x_expansion+=[[2**i*(2*np.pi)/2**n, [i]] for i in range(n)]
 
     cos_expansion=[((-1)**(1+i/2)/np.math.factorial(i) if i%2==0 else 0) for i in range(2*no_terms-1)]
