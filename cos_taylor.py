@@ -1,4 +1,5 @@
 import numpy as np
+from qiskit import QuantumCircuit, Aer, transpile, QuantumRegister, ClassicalRegister, assemble
 
 #
 # def power_expansion(input_expression, power):
@@ -82,6 +83,80 @@ def get_cos_expression(n, no_terms):
         if cos_expansion[i]!=0:
             cos_expression=add_expressions(cos_expression, scalar_mult(cos_expansion[i], power_expansion(x_2, i/2)))
     return cos_expression
+
+def construct_exp_k_cos_circuit(n, no_terms, k):
+    qc=QuantumCircuit(n)
+
+    cos_expression0=get_cos_expression(n, no_terms)
+
+    cos_expression=[el for el in cos_expression0]
+
+    # print(cos_expression)
+    while len(cos_expression):
+        # apply_gate(0)
+        i=0
+        current_terms=[]
+        while i < len(cos_expression):
+            term=cos_expression[i]
+            # print(current_terms)
+            if len([el for c_term in current_terms for el in c_term[1]]+term[1])==len(list(set([el for c_term in current_terms for el in c_term[1]]+term[1]))):
+                cos_expression.pop(i)
+                # print(len(cos_expression))
+                current_terms+=[term]
+                angle=term[0]
+                bits=term[1]
+                # print(cos_expression)
+                if len(bits)==1:
+                    qc.p(k*angle, bits[0])
+                elif len(bits)==2:
+                    qc.cp(k*angle, bits[0], bits[1])
+                elif len(bits)>2:
+                    qc.mcp(k*angle, [bit for bit in bits[1:]], bits[0])
+            else:
+                i+=1
+
+    return qc
+
+def construct_exp_k_abs_cos_circuit(n, no_terms, k):
+    qc=QuantumCircuit(n)
+
+    cos_expression0=get_cos_expression(n, no_terms)
+
+    for i in range(len(cos_expression0)):
+
+
+    cos_expression=[el for el in cos_expression0]
+
+    # print(cos_expression)
+    while len(cos_expression):
+        # apply_gate(0)
+        i=0
+        current_terms=[]
+        while i < len(cos_expression):
+            term=cos_expression[i]
+            # print(current_terms)
+            if len([el for c_term in current_terms for el in c_term[1]]+term[1])==len(list(set([el for c_term in current_terms for el in c_term[1]]+term[1]))):
+                cos_expression.pop(i)
+                # print(len(cos_expression))
+                current_terms+=[term]
+                angle=term[0]
+                bits=term[1]
+                if n-1 in bits:
+                    bits.remove(n-1)
+                    if n-2 not in bits:
+                        bits+=[n-2]
+
+                # print(cos_expression)
+                if len(bits)==1:
+                    qc.p(k*angle, bits[0])
+                elif len(bits)==2:
+                    qc.cp(k*angle, bits[0], bits[1])
+                elif len(bits)>2:
+                    qc.mcp(k*angle, [bit for bit in bits[1:]], bits[0])
+            else:
+                i+=1
+
+    return qc
 
 if __name__ == '__main__':
     n=int(input("Enter number of qubits: "))
