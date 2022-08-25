@@ -1,5 +1,6 @@
 import numpy as np
 from qiskit import QuantumCircuit, Aer, transpile, QuantumRegister, ClassicalRegister, assemble
+import matplotlib.pyplot as plt
 
 #
 # def power_expansion(input_expression, power):
@@ -122,9 +123,6 @@ def construct_exp_k_abs_cos_circuit(n, no_terms, k):
 
     cos_expression0=get_cos_expression(n, no_terms)
 
-    for i in range(len(cos_expression0)):
-
-
     cos_expression=[el for el in cos_expression0]
 
     # print(cos_expression)
@@ -161,4 +159,32 @@ def construct_exp_k_abs_cos_circuit(n, no_terms, k):
 if __name__ == '__main__':
     n=int(input("Enter number of qubits: "))
     no_terms=int(input("Enter number of terms for cos Taylor expansion: "))
-    print(get_cos_expression(n, no_terms))
+    # exp_cos=(construct_exp_k_abs_cos_circuit(n, no_terms, 1)).to_gate()
+    exp_cos=(construct_exp_k_cos_circuit(n, no_terms, 1)).to_gate()
+    c_exp_cos=exp_cos.control(1)
+    inp_reg=QuantumRegister(n)
+    out_reg=QuantumRegister(1)
+    out_meas=ClassicalRegister(1)
+    x=[]
+    y=[]
+    for i in range(2**n):
+        qc=QuantumCircuit(inp_reg,out_reg,out_meas)
+        for j in range(n):
+            if i%(2**(j+1))>=2**j:
+                qc.x(inp_reg[j])
+        qc.h(out_reg)
+        qc.p(-np.pi/2, out_reg)
+        qc.append(c_exp_cos,list(out_reg)+list(inp_reg))
+        qc.rx(np.pi/2,  out_reg)
+        qc.measure(out_reg,out_meas)
+        simulator = Aer.get_backend('qasm_simulator')
+        result = simulator.run(transpile(qc, simulator)).result()
+        counts = result.get_counts(qc)
+        print(counts)
+        if "1" not in counts.keys():
+            counts["1"]=0
+        x+=[2*np.pi*i/2**n]
+        y+=[counts['1']/1024]
+
+    plt.scatter(x, y)
+    plt.show()
