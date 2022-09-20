@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import special, linalg
 
 class Node:
 
@@ -48,6 +49,7 @@ class Grid:
         self.node_active = node_active
         self.construct_b_vector()
         self.construct_A_matrix()
+        self.construct_D_matrix()
 
 
     def get_line_from_nodes(self, node1, node2):
@@ -57,7 +59,7 @@ class Grid:
         return None
 
     def construct_b_vector(self):
-        self.b=([node.real_power * int(self.node_active[self.nodes.index(node)]) for node in self.nodes])
+        self.b=np.array([node.real_power * int(self.node_active[self.nodes.index(node)]) for node in self.nodes])
 
     def construct_A_matrix(self):
         self.A=np.zeros([len(self.nodes),len(self.nodes)])
@@ -69,8 +71,33 @@ class Grid:
                     continue
                 self.A[i,i]+=self.get_line_from_nodes(self.nodes[i], self.nodes[j]).susceptance
                 self.A[i,j]-=self.get_line_from_nodes(self.nodes[i], self.nodes[j]).susceptance
-        # self.A=np.delete(self.A, 0,0)
-        # self.A=np.delete(self.A, 0,1)
+        self.eigenvalue_est_A()
+
+    def construct_D_matrix(self):
+        self.D=np.zeros([max(len(self.nodes), len(self.lines)), max(len(self.nodes), len(self.lines))])
+        for i in range(len(self.lines)):
+            line=self.lines[i]
+            self.D[i,self.nodes.index(line.node1)]=1
+            self.D[i,self.nodes.index(line.node2)]=-1
+        for i in range(min(len(self.lines), len(self.nodes)), max(len(self.lines), len(self.nodes))):
+            self.D[i,i]=1
+
+    def eigenvalue_est_A(self):
+        eig_max_upp_bound=max([self.A[i,i]*2 - int(self.nodes[i]==self.slack_node_neighbor)*self.avg_susceptance for i in range(len(self.nodes))])
+        t=np.array([int(i==0) for i in range(len(self.nodes))])
+        prev_eig=0
+        eig=0
+        while True:
+            t = (self.A - eig_max_upp_bound*np.eye(len(self.nodes))) @ t
+            if abs(linalg.norm(t)-eig)<0.0001:
+                print(t/linalg.norm(t))
+                break
+            eig=linalg.norm(t)
+            t=t/eig
+        min_eig=-eig+eig_max_upp_bound
+        self.A_eig_bounds = (min_eig, eig_max_upp_bound)
+
+
 
 class UCProblem:
 
