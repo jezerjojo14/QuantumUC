@@ -181,7 +181,7 @@ def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
                 bits=term[1]
                 # print(cos_expression)
                 if len(bits)>=1:
-                    qc.mcrx(c*angle, qc.qbit_argument_conversion(bits), qc.qbit_argument_conversion(n)[0])
+                    qc.mcry(c*angle, qc.qbit_argument_conversion(bits), qc.qbit_argument_conversion(n)[0])
             else:
                 i+=1
 
