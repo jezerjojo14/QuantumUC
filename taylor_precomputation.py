@@ -2,7 +2,7 @@ import numpy as np
 from qiskit import QuantumCircuit, Aer, transpile, QuantumRegister, ClassicalRegister, assemble
 import matplotlib.pyplot as plt
 from scipy.misc import derivative
-from math import asin
+from math import asin, factorial
 
 #
 # def power_expansion(input_expression, power):
@@ -40,6 +40,7 @@ def scalar_mult(c, exp):
     return exp1
 
 def power_expansion(input_expression, j, term=[1,[]]):
+    # print(j, input_expression)
     if j==0:
         return [term]
     output_expression=[]
@@ -94,19 +95,33 @@ def get_asin_x_inv_expression(n, no_terms, x_scale=1):
 
     # no_terms=int(input("Enter number of terms for cos Taylor expansion: "))
 
-    x_expansion=[[-x_scale, []]]
+    x_expansion=[[-int(x_scale/2)-1, []]]
     x_expansion+=[[2**i*(x_scale)/2**n, [i]] for i in range(n)]
 
-    asin_x_inv_expansion=[derivative(f, x_scale, dx=1e-6, i)/factorial(i) for i in range(no_terms)]
+    asin_expansion=[np.prod([(2*(j+1)-1)/(2*(j+1)) for j in range(i)])/(2*i+1) for i in range(no_terms)]
+    x_inv_expansion=[(-1)**i * (int(x_scale/2)+1)**(-i-1) for i in range(no_terms)]
+
     asin_x_inv_expression=[]
-    for i in range(len(asin_x_inv_expansion)):
+    x_inv_expression=[]
+
+    for i in range(len(x_inv_expansion)):
         # print()
         # print()
         print(i)
         # print()
         # print()
-        if cos_expansion[i]!=0:
-            asin_x_inv_expression=add_expressions(asin_x_inv_expression, scalar_mult(asin_x_inv_expansion[i], power_expansion(x_expansion, i)))
+        if x_inv_expansion[i]!=0:
+            x_inv_expression=add_expressions(x_inv_expression, scalar_mult(x_inv_expansion[i], power_expansion(x_expansion, i)))
+    # asin_x_inv_expression=x_inv_expression
+    for i in range(len(asin_expansion)):
+        # print()
+        # print()
+        print(i)
+        # print()
+        # print()
+        if asin_expansion[i]!=0:
+            asin_x_inv_expression=add_expressions(asin_x_inv_expression, scalar_mult(asin_expansion[i], power_expansion(x_inv_expression, 2*i+1)))
+    print(asin_x_inv_expression)
     return asin_x_inv_expression
 
 def construct_exp_k_cos_circuit(n, no_terms, k):
@@ -146,6 +161,7 @@ def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
     qc=QuantumCircuit(n+1)
 
     asin_x_inv_expression0=get_asin_x_inv_expression(n, no_terms, lambda_max)
+    # asin_x_inv_expression0=[[-63087.6667906746, []], [12687.283502785986, [0]], [23049.25959514332, [1]], [38271.986750478594, [2]], [54300.32710813492, [3]], [62366.300049603175, [4]], [63086.35009920635, [5]], [-4268.10157788479, [0, 1]], [-7220.717149536358, [0, 2]], [-10549.67013687749, [0, 3]], [-12467.678329912014, [0, 4]], [-12687.01859876948, [0, 5]], [-13216.789681414763, [1, 2]], [-19251.137516299885, [1, 3]], [-22672.2842883269, [1, 4]], [-23048.789254347485, [1, 5]], [-32216.48566691081, [2, 3]], [-37706.19415283203, [2, 4]], [-38271.19364420573, [2, 5]], [-53605.963541666664, [3, 4]], [-54299.010416666664, [3, 5]], [-62363.666666666664, [4, 5]], [2266.2649238059917, [0, 1, 2]], [3410.1079309930406, [0, 1, 3]], [4159.764267573753, [0, 1, 4]], [4268.008076687654, [0, 1, 5]], [5823.490589911739, [0, 2, 3]], [7054.338254680236, [0, 2, 4]], [7220.591434458892, [0, 2, 5]], [10340.017128090063, [0, 3, 4]], [10549.530560692152, [0, 3, 5]], [12467.783706108728, [0, 4, 5]], [10714.324971516928, [1, 2, 3]], [12928.981417338053, [1, 2, 4]], [13216.59024556478, [1, 2, 5]], [18890.370297749836, [1, 3, 4]], [19250.919855753582, [1, 3, 5]], [22672.74089558919, [1, 4, 5]], [31673.133463541668, [2, 3, 4]], [32216.216145833332, [2, 3, 5]], [37708.647135416664, [2, 4, 5]], [53630.333333333336, [3, 4, 5]], [-1736.4744694530964, [0, 1, 2, 3]], [-2187.299824297428, [0, 1, 2, 4]], [-2266.1832591295242, [0, 1, 2, 5]], [-3307.8539086580276, [0, 1, 3, 4]], [-3410.0080416202545, [0, 1, 3, 5]], [-4159.15921831131, [0, 1, 4, 5]], [-5665.626546621323, [0, 2, 3, 4]], [-5823.338840007782, [0, 2, 3, 5]], [-7052.219389915466, [0, 2, 4, 5]], [-10324.697973251343, [0, 3, 4, 5]], [-10440.405654907227, [1, 2, 3, 4]], [-10714.055450439453, [1, 2, 3, 5]], [-12923.476623535156, [1, 2, 4, 5]], [-18851.675659179688, [1, 3, 4, 5]], [-31547.5390625, [2, 3, 4, 5]], [1662.712013244629, [0, 1, 2, 3, 4]], [1736.4404907226562, [0, 1, 2, 3, 5]], [2190.599105834961, [0, 1, 2, 4, 5]], [3327.6333770751953, [0, 1, 3, 4, 5]], [5725.481216430664, [0, 2, 3, 4, 5]], [10584.244140625, [1, 2, 3, 4, 5]], [-1606.6291809082031, [0, 1, 2, 3, 4, 5]]]
 
     asin_x_inv_expression=[el for el in asin_x_inv_expression0]
 
@@ -164,7 +180,8 @@ def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
                 angle=term[0]
                 bits=term[1]
                 # print(cos_expression)
-                qc.mcrx(c*angle, bits, n)
+                if len(bits)>=1:
+                    qc.mcrx(c*angle, qc.qbit_argument_conversion(bits), qc.qbit_argument_conversion(n)[0])
             else:
                 i+=1
 
@@ -175,9 +192,7 @@ def construct_exp_k_abs_cos_circuit(n, no_terms, k):
 
     # cos_expression0=get_cos_expression(n, no_terms)
 
-    # print(cos_expression0)
-
-    cos_expression0=[[1.0018291040136216, []], [-0.0053906909408226395, [0]], [-0.020195285889376233, [1]], [-0.07757656247375054, [2]], [-0.29466302303153946, [3]], [-1.0018286392476121, [4]], [-2.0018291040136216, [5]], [-0.018736138784648117, [0, 1]], [-0.03669880252043465, [0, 2]], [-0.0673464347348485, [0, 3]], [-0.09262669957043501, [0, 4]], [0.010205964268625845, [0, 5]], [-0.07243349540195086, [1, 2]], [-0.13137958833501148, [1, 3]], [-0.17489540698479594, [1, 4]], [0.039410005486145566, [1, 5]], [-0.24689937382913585, [2, 3]], [-0.3051073198481561, [2, 4]], [0.15369702996249213, [2, 5]], [-0.41244422280639353, [3, 4]], [0.5875562419596146, [3, 5]], [2.0018291040136216, [4, 5]], [0.0023088614855641893, [0, 1, 2]], [0.00729082303506509, [0, 1, 3]], [0.021559118795567676, [0, 1, 4]], [0.03776581012786747, [0, 1, 5]], [0.017034095258993943, [0, 2, 3]], [0.04600287898069347, [0, 2, 4]], [0.07384179735594323, [0, 2, 5]], [0.09946015297839916, [0, 3, 4]], [0.1352446587859886, [0, 3, 5]], [0.18582906215342937, [0, 4, 5]], [0.03641045028875116, [1, 2, 3]], [0.09463737447722967, [1, 2, 4]], [0.14562869601753084, [1, 2, 5]], [0.20210744998219907, [1, 3, 4]], [0.2637014184553754, [1, 3, 5]], [0.3507724479636268, [1, 4, 5]], [0.4128105047117083, [2, 3, 4]], [0.4952022698564211, [2, 3, 5]], [0.6116765322726018, [2, 4, 5]], [0.8267166200943916, [3, 4, 5]], [0.004464162536327908, [0, 1, 2, 3]], [0.004758420216324491, [0, 1, 2, 4]], [-0.004837642032817889, [0, 1, 2, 5]], [0.005338217172684293, [0, 1, 3, 4]], [-0.014860492009333474, [0, 1, 3, 5]], [-0.04341033964910962, [0, 1, 4, 5]], [0.0065046973275048655, [0, 2, 3, 4]], [-0.0344918085260493, [0, 2, 3, 5]], [-0.092444889073755, [0, 2, 4, 5]], [-0.19943510443421625, [0, 3, 4, 5]], [0.008842753970982367, [1, 2, 3, 4]], [-0.07354901117373053, [1, 2, 3, 5]], [-0.1900232735899115, [1, 2, 4, 5]], [-0.40506336141170174, [1, 3, 4, 5]], [-0.8267166200943923, [2, 3, 4, 5]], [-0.008322107504902723, [0, 1, 2, 3, 4]], [-0.008720860942507333, [0, 1, 2, 3, 5]], [-0.009288962263276785, [0, 1, 2, 4, 5]], [-0.01034861936414469, [0, 1, 3, 4, 5]], [-0.012434430450113566, [0, 2, 3, 4, 5]], [-0.01658989727098898, [1, 2, 3, 4, 5]], [0.016589897270989036, [0, 1, 2, 3, 4, 5]]]
+    print(cos_expression0)
 
     cos_expression=[el for el in cos_expression0]
 
@@ -216,9 +231,8 @@ if __name__ == '__main__':
     n=int(input("Enter number of qubits: "))
     no_terms=int(input("Enter number of terms for cos Taylor expansion: "))
 
-    exp_cos=(construct_exp_k_abs_cos_circuit(n, no_terms, 5)).to_gate()
+    exp_asin=(construct_asin_x_inv_circuit(n, no_terms, 1, 8)).to_gate()
 
-    c_exp_cos=exp_cos.control(1)
     inp_reg=QuantumRegister(n)
     out_reg=QuantumRegister(1)
     out_meas=ClassicalRegister(1)
@@ -229,13 +243,7 @@ if __name__ == '__main__':
         for j in range(n):
             if i%(2**(j+1))>=2**j:
                 qc.x(inp_reg[j])
-        qc.h(out_reg)
-        qc.p(-np.pi/2, out_reg)
-        qc.append(c_exp_cos,list(out_reg)+list(inp_reg))
-        for j in range(n):
-            if i%(2**(j+1))>=2**j:
-                qc.x(inp_reg[j])
-        qc.rx(-np.pi/2,  out_reg)
+        qc.append(exp_asin, list(inp_reg)+list(out_reg))
         qc.measure(out_reg,out_meas)
         simulator = Aer.get_backend('qasm_simulator')
         result = simulator.run(transpile(qc, simulator)).result()
@@ -243,7 +251,7 @@ if __name__ == '__main__':
         print(counts)
         if "1" not in counts.keys():
             counts["1"]=0
-        x+=[2*np.pi*i/2**n]
+        x+=[8*i/2**n]
         y+=[counts['1']/1024]
 
     plt.scatter(x, y)
