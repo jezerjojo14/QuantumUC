@@ -73,15 +73,6 @@ class Grid:
                 self.A[i,j]-=self.get_line_from_nodes(self.nodes[i], self.nodes[j]).susceptance
         self.eigenvalue_est_A()
 
-    def construct_D_matrix(self):
-        self.D=np.zeros([max(len(self.nodes), len(self.lines)), max(len(self.nodes), len(self.lines))])
-        for i in range(len(self.lines)):
-            line=self.lines[i]
-            self.D[i,self.nodes.index(line.node1)]=1
-            self.D[i,self.nodes.index(line.node2)]=-1
-        for i in range(min(len(self.lines), len(self.nodes)), max(len(self.lines), len(self.nodes))):
-            self.D[i,i]=1
-
     def eigenvalue_est_A(self):
         eig_max_upp_bound=max([self.A[i,i]*2 - int(self.nodes[i]==self.slack_node_neighbor)*self.avg_susceptance for i in range(len(self.nodes))])
         t=np.array([int(i==0) for i in range(len(self.nodes))])
@@ -112,3 +103,5 @@ class UCProblem:
             raise
 
         # TODO
+
+    
