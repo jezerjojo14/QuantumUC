@@ -32,7 +32,7 @@ def qft_rotations(circuit, n):
         circuit.cp(pi/2**(n-qubit), qubit, n)
     # At the end of our function, we call the same function again on
     # the next qubits (we reduced n by one earlier in the function)
-    qft_rotations_0(circuit, n)
+    qft_rotations(circuit, n)
 
 def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc):
 
