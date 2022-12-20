@@ -11,6 +11,29 @@ from qiskit.opflow import I, X, Y, Z, Zero, One, Plus, Minus
 from amp_est import real_amp_est
 from taylor_precomputation import construct_asin_x_inv_circuit, construct_exp_k_abs_cos_circuit
 
+def general_CZ(F, n):
+    x=QuantumRegister(n, 'x')
+    y=QuantumRegister(n, 'y')
+    qc_CZ=QuantumCircuit(x,y)
+    for k in range(n):
+        for i in range(n):
+            j=(i+k)%n
+            qc_CZ.cp(2*pi*2**(i+j-n)/F,x[i],y[j])
+    return qc_CZ
+
+# Function copied from qiskit textbook that implements a qft without the swaps
+def qft_rotations(circuit, n):
+    """Performs qft on the first n qubits in circuit (without swaps)"""
+    if n == 0:
+        return circuit
+    n -= 1
+    circuit.h(n)
+    for qubit in range(n):
+        circuit.cp(pi/2**(n-qubit), qubit, n)
+    # At the end of our function, we call the same function again on
+    # the next qubits (we reduced n by one earlier in the function)
+    qft_rotations_0(circuit, n)
+
 def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc):
 
     hhl_circ=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
@@ -37,11 +60,17 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
     hhl_circ.x(gen_nodes)
 
     for i in range(len(gen_nodes)):
-        for j in range(tot_nodes):
+        # Take the i-th entry in tot_nodes' statevector to the last position in the statevector
+        for j in range(len(tot_nodes)):
             if i%(2**(j+1))<2**j:
                 hhl_circ.x(tot_nodes[j])
+        # Last position in tot_nodes' statevector corresponds to the basis state where all qubits in tot_nodes are 1
+        # The following statement flips the ancilla when all tot_nodes's qubits are 1 and when gen_nodes[i] is one.
+        # The first half of the combined statevector of tot_nodes and state_prep_anc is the exact statevector
+        # that we're looking for.
         hhl_circ.mcx([gen_nodes[i]]+[tot_nodes],state_prep_anc[0])
-        for j in range(tot_nodes):
+        # Undo the shuffling we did earlier.
+        for j in range(len(tot_nodes)):
             if i%(2**(j+1))<2**j:
                 hhl_circ.x(tot_nodes[j])
 
@@ -193,7 +222,10 @@ def create_QAOA_ansatz(
                         qc.compose(exp_k_abs_cos_circuit, qadc_reg)
                         qc.compose(qadc_circ.inverse(), [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
 
-
+        # Penalty Costs
+        for t in range(timestep_count):
+            C_P=sum(running_costs)+sum(running_costs)+sum([sum(arr) for arr in line_costs])
+            
 
         # Mixer layer
         for t in range(timestep_count):
