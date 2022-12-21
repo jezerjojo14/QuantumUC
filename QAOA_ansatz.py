@@ -51,7 +51,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     B=np.concatenate(B, np.zeros((extra_dim, len(list(B)))))
     B=np.concatenate(B, np.zeros((len(list(B)), extra_dim)), axis=1)
-    for i in range(B_extra_dim):
+    for i in range(extra_dim):
         B[-i][-i]=1
 
     # State prep
@@ -97,6 +97,8 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     evolution_op = (H).exp_i()
 
+    num_time_slices=3
+
     trotterized_op = PauliTrotterEvolution(
                     trotter_mode='trotter',
                     reps=num_time_slices).convert(evolution_op)
@@ -123,7 +125,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
         for j in range(n):
             for m in range(j):
                 hhl_circ_temp.cp(-pi/float(2**(j-m)), hhl_phase_reg[m], hhl_phase_reg[j])
-            qc.h(j)
+            hhl_circ_temp.h(j)
 
     qft_dagger(len(hhl_phase_reg))
 
@@ -162,6 +164,10 @@ def create_QAOA_ansatz(
     output_reg=[ClassicalRegister(gen_node_count) for i in range(timestep_count)]
 
     qc=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,output_reg)
+
+    # Use HHL Phase reg for penalty adder
+    qft=QuantumCircuit(hhl_phase_qubit_count)
+    qft_rotations(qft, hhl_phase_qubit_count)
 
     hhl_circ=create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
 
@@ -223,8 +229,23 @@ def create_QAOA_ansatz(
                         qc.compose(qadc_circ.inverse(), [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
 
         # Penalty Costs
+        C_P=sum(running_costs)+sum(running_costs)+sum([sum(arr) for arr in line_costs])
         for t in range(timestep_count):
-            C_P=sum(running_costs)+sum(running_costs)+sum([sum(arr) for arr in line_costs])
+            qc.compose(qft, qubits=hhl_phase_reg, inplace=True)
+            for i in range(gen_node_count):
+                a_i=real_powers[i]*2**(hhl_phase_qubit_count-1)/sum(real_powers[gen_node_count:])
+                for j in range(hhl_phase_qubit_count):
+                    qc.cp(2*pi*2**(j-hhl_phase_qubit_count)*a_i,gen_nodes[i],((list(hhl_phase_reg))[::-1])[j])
+                # qc.compose(general_CZ(1.0/c_coeff,n), qubits=(list(hhl_phase_reg))[::-1]+list(gen_nodes[t]), inplace=True)
+            qc.compose(qft.inverse(), qubits=hhl_phase_reg, inplace=True)
+            qc.rz(-gamma[layer_index]*C_P, gen_nodes[t][i])
+            qc.compose(qft, qubits=hhl_phase_reg, inplace=True)
+            for i in range(gen_node_count):
+                a_i=real_powers[i]*2**(hhl_phase_qubit_count-1)/sum(real_powers[gen_node_count:])
+                for j in range(hhl_phase_qubit_count):
+                    qc.cp(-2*pi*2**(j-hhl_phase_qubit_count)*a_i,gen_nodes[i],((list(hhl_phase_reg))[::-1])[j])
+            qc.compose(qft.inverse(), qubits=hhl_phase_reg, inplace=True)
+
             
 
         # Mixer layer
