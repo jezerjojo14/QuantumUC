@@ -46,11 +46,12 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     extra_dim=2**len(tot_nodes)-len(real_powers)
 
-    real_powers=np.concatenate(real_powers, np.zeros((extra_dim,1)))
+    real_powers=np.concatenate((real_powers, np.array([0 for _ in range(extra_dim)])))
+    B=np.array(B)
     B=B*2*pi*(2**(len(hhl_phase_reg)-1))/(max_eigval*(2**len(hhl_phase_reg)))
 
-    B=np.concatenate(B, np.zeros((extra_dim, len(list(B)))))
-    B=np.concatenate(B, np.zeros((len(list(B)), extra_dim)), axis=1)
+    B=np.concatenate((B, np.zeros((extra_dim, len(list(B))))))
+    B=np.concatenate((B, np.zeros((len(list(B)), extra_dim))), axis=1)
     for i in range(extra_dim):
         B[-i][-i]=1
 
@@ -68,7 +69,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
         # The following statement flips the ancilla when all tot_nodes's qubits are 1 and when gen_nodes[i] is one.
         # The first half of the combined statevector of tot_nodes and state_prep_anc is the exact statevector
         # that we're looking for.
-        hhl_circ.mcx([gen_nodes[i]]+[tot_nodes],state_prep_anc[0])
+        hhl_circ.mcx([gen_nodes[i]]+list(tot_nodes),state_prep_anc[0])
         # Undo the shuffling we did earlier.
         for j in range(len(tot_nodes)):
             if i%(2**(j+1))<2**j:
@@ -78,19 +79,21 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # Paulinomial decomposition
 
-    H=Zero
+    H=I
     for i in range(len(tot_nodes)-1):
-        H=H^Zero
+        H=H^I
+    
+    H=0*H
 
     paulis=[I,X,Y,Z]
 
-    for i in range(4**tot_nodes):
+    for i in range(4**len(tot_nodes)):
         term=paulis[i%4]
         i=i//4
-        for j in range(tot_nodes-1):
+        for j in range(len(tot_nodes)-1):
             term=term^paulis[i%4]
             i=i//4
-        a=sum([((term.to_matrix())@(-B))[k][k] for k in range(2**tot_nodes)])/(2**tot_nodes)
+        a=sum([((term.to_matrix())@(-B))[k][k] for k in range(2**len(tot_nodes))])/(2**len(tot_nodes))
         H+=(a*term)
 
     # Create evolution circuit
@@ -133,7 +136,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # Conditioned rotations
 
-    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,C), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
+    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,C,max_eigval), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
 
     # Uncompute QPE
 
@@ -195,13 +198,18 @@ def create_QAOA_ansatz(
                 qc.x(gen_nodes[t+1][i])
 
         # Transmission Costs
-        exp_k_abs_cos_circuit=construct_exp_k_abs_cos_circuit(qadc_qubit_count,4,gamma[layer_index])
         for i in range(gen_node_count):
             for j in range(i):
                 C_L=line_costs[i][j]
+
+                exp_k_abs_cos_circuit=construct_exp_k_abs_cos_circuit(qadc_qubit_count,4,C_L*np.linalg.norm(np.array(real_powers))*gamma[layer_index])
+
                 if C_L:
                     for t in range(timestep_count):
-                        # Move theta_i to 0th component of statevector, also update j accordingly to track the position of theta_j
+
+                        # Here we set the 0-th component of the statevector at the end of the hhl circuit to theta_i-theta_j
+
+                            # Move theta_i to 0th component of statevector, also update j accordingly to track the position of theta_j
                         for k in range(tot_nodes):
                             if i%(2**(k+1))>=2**k:
                                 hhl_circ.x(tot_nodes[k])
@@ -209,19 +217,21 @@ def create_QAOA_ansatz(
                                     j-=2**k
                                 else:
                                     j+=2**k
-                        # Move theta_j to 2**k-th component
+                            # Set k to be the position of the most significant 1 in binary expansion of j
                         k=tot_nodes-1
                         while True:
                             if j<2**k:
                                 k-=1
                                 continue
                             break
+                            # Move theta_j to 2**k-th component
                         for l in range(k):
+                                # If l-th digit of binary expansion of j is 1
                             if j%(2**(l+1))>=2**l:
                                 hhl_circ.cx(tot_nodes[k],tot_nodes[l])
                         hhl_circ.h(k)
                         hhl_circ.x(k)
-
+                        
                         qadc_circ=real_amp_est(gen_node_count+len(tot_nodes)+2+hhl_phase_qubit_count,0,hhl_circ,qadc_qubit_count)
 
                         qc.compose(qadc_circ, [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
