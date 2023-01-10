@@ -76,7 +76,6 @@ class Grid:
     def eigenvalue_est_A(self):
         eig_max_upp_bound=max([self.A[i,i]*2 - int(self.nodes[i]==self.slack_node_neighbor)*self.avg_susceptance for i in range(len(self.nodes))])
         t=np.array([int(i==0) for i in range(len(self.nodes))])
-        prev_eig=0
         eig=0
         while True:
             t = (self.A - eig_max_upp_bound*np.eye(len(self.nodes))) @ t
