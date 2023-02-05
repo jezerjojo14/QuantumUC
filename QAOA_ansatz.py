@@ -1,6 +1,9 @@
 import numpy as np
+from scipy import linalg
+
 from math import pi
-from qiskit import QuantumCircuit, Aer, transpile, QuantumRegister, ClassicalRegister, assemble
+from qiskit import QuantumCircuit, transpile, QuantumRegister, ClassicalRegister, assemble
+from qiskit.providers.aer import Aer
 from qiskit.circuit import ParameterVector
 # from qiskit.circuit.library.data_preparation.state_preparation import prepare_state
 
@@ -10,6 +13,8 @@ from qiskit.opflow import I, X, Y, Z, Zero, One, Plus, Minus
 
 from amp_est import real_amp_est
 from taylor_precomputation import construct_asin_x_inv_circuit, construct_exp_k_abs_cos_circuit
+
+import time
 
 def general_CZ(F, n):
     x=QuantumRegister(n, 'x')
@@ -35,6 +40,8 @@ def qft_rotations(circuit, n):
     qft_rotations(circuit, n)
 
 def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc):
+
+    print("Constructing HHL Circuit")
 
     hhl_circ=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
     hhl_circ_temp=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
@@ -267,3 +274,62 @@ def create_QAOA_ansatz(
         qc.measure(gen_nodes[t], output_reg[t])
 
     return qc
+
+if __name__=="__main__":
+    init_time=time.time()
+    def eigenvalue_est_A(A):
+        eig_max_upp_bound=max([A[i][i]+abs(sum([A[i][j]*int(j!=i) for j in range(len(A[0]))])) for i in range(len(A[0]))])
+        t=np.array([int(i==0) for i in range(len(A[0]))])
+        # prev_eig=0
+        eig=0
+        while True:
+            t = (A - eig_max_upp_bound*np.eye(len(A[0]))) @ t
+            if abs(linalg.norm(t)-eig)<0.0001:
+                # print(t/linalg.norm(t))
+                break
+            eig=linalg.norm(t)
+            t=t/eig
+        min_eig=-eig+eig_max_upp_bound
+        return (min_eig, eig_max_upp_bound)
+    
+    real_powers=[1,1,-4]
+
+    B=[
+        [20,0,-10],
+        [0,20,-10],
+        [-10,-10,30]
+    ]
+
+    C, max_eigval=eigenvalue_est_A(B)
+    C*=0.9
+    gen_nodes=QuantumRegister(3)
+    tot_nodes=QuantumRegister(2)
+    state_prep_anc=QuantumRegister(1)
+    hhl_phase_reg=QuantumRegister(5)
+    hhl_anc=QuantumRegister(1)
+
+    circ=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
+    circ.x(gen_nodes)
+    hhl_circ=create_hhl_circ(real_powers=real_powers,B=B,max_eigval=max_eigval,C=C,gen_nodes=gen_nodes,tot_nodes=tot_nodes,state_prep_anc=state_prep_anc,hhl_phase_reg=hhl_phase_reg,hhl_anc=hhl_anc)
+    circ.compose(hhl_circ, inplace=True)
+
+    # [[0.15445959699125714, []], [-0.013467854613723407, [0]], [-0.025840088768203193, [1]], [-0.04752743575465538, [2]], [-0.08020614044877576, [3]], [-0.1144490102393349, [4]], [0.0021333936021695936, [0, 1]], [0.004041668715259125, [0, 2]], [0.0072178337331401995, [0, 3]], [0.011113216977662375, [0, 4]], [0.007860598761224758, [1, 2]], [0.014004451268689943, [1, 3]], [0.021390965838493186, [1, 4]], [0.026309725848645386, [2, 3]], [0.03946908782564946, [2, 4]], [0.06584440633789866, [3, 4]], [-0.0004406087890895274, [0, 1, 2]], [-0.0008556586582235611, [0, 1, 3]], [-0.0016632728215736365, [0, 1, 4]], [-0.0016895807883750976, [0, 2, 3]], [-0.00330207212677888, [0, 2, 4]], [-0.0065407448950106995, [0, 3, 4]], [-0.003359478950828468, [1, 2, 3]], [-0.006582018596563612, [1, 2, 4]], [-0.01305130239678407, [1, 3, 4]], [-0.02600716412104716, [2, 3, 4]], [3.517106095215182e-05, [0, 1, 2, 3]], [3.9449882891433426e-05, [0, 1, 2, 4]], [5.370024117731954e-05, [0, 1, 3, 4]], [8.599526708462783e-05, [0, 2, 3, 4]], [0.0001526154258253206, [1, 2, 3, 4]], [-3.461015761544577e-05, [0, 1, 2, 3, 4]]]
+
+    simulator = Aer.get_backend('aer_simulator')
+    circ.save_statevector()
+
+    print("Time elapsed:", time.time()-init_time)
+    print("Transpiling circuit")
+    print()
+    circ = transpile(circ, simulator)
+
+    # Run and get statevector
+
+    print("Time elapsed:", time.time()-init_time)
+    print("Running circuit")
+    print()
+    result = simulator.run(circ).result()
+    statevector = result.get_statevector(circ)
+
+    print("Solution statevector:", [statevector[8*i+7] for i in range(4)])
+    print("Time elapsed:", time.time()-init_time)

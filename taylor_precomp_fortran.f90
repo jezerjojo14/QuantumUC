@@ -90,20 +90,43 @@ subroutine power_expansion(n, expression, output_expression, power)
 
 end subroutine power_expansion
 
-! program precomp
-!     implicit none
-!     real :: output(8)
-!     interface
-!         subroutine power_expansion(n, expression, output_expression, power)
-!             integer, intent(in) :: power
-!             integer, intent(in) :: n
-!             real, intent(in) :: expression(2**n)
-!             real, intent(out) :: output_expression(2**n)
-!             integer :: qubits(n)
-        
-!             integer :: partition(2**n)
-!         end subroutine
-!     endinterface
-!     call power_expansion(3, (/ 0.0,3.0,5.0,0.0,7.0,0.0,0.0,0.0 /), output_expression=output, power=2)
-!     print *, output
-! end program precomp
+program precomp
+    implicit none
+    real, dimension(:), allocatable :: output
+    integer :: num_args, ix
+    character(len=12), dimension(:), allocatable :: args
+    integer :: int_args(2)
+    real, dimension(:), allocatable :: real_args
+    interface
+        subroutine power_expansion(n, expression, output_expression, power)
+            integer, intent(in) :: power
+            integer, intent(in) :: n
+            real, intent(in) :: expression(2**n)
+            real, intent(out) :: output_expression(2**n)
+            integer :: qubits(n)
+            
+            integer :: partition(2**n)
+        end subroutine
+    endinterface
+
+    num_args = command_argument_count()
+    allocate(args(num_args))  ! I've omitted checking the return status of the allocation 
+    allocate(real_args(num_args-2))
+    allocate(output(num_args-2))
+
+    do ix = 1, num_args
+        call get_command_argument(ix,args(ix))
+        if ( ix  == 1 ) then
+            read(args(1), *) int_args(1)
+        else if (ix == num_args) then
+            read(args(num_args), *) int_args(2)
+        else
+            read(args(ix), *) real_args(ix-1)
+        endif
+        ! now parse the argument as you wish
+    end do
+    
+    ! call power_expansion(3, (/ 0.0,3.0,5.0,0.0,7.0,0.0,0.0,0.0 /), output_expression=output, power=2)
+    call power_expansion((int_args(1)), (/ (real_args(ix), ix=1,num_args-2) /), output_expression=output, power=int_args(2))
+    print *, output
+end program precomp
