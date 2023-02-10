@@ -39,7 +39,27 @@ def qft_rotations(circuit, n):
     # the next qubits (we reduced n by one earlier in the function)
     qft_rotations(circuit, n)
 
-def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc):
+def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,num_time_slices=3):
+
+    """
+    Creates a quantum circuit to perform HHL.
+
+    real_powers (list | numpy.array): Contains real powers of all nodes
+    B (list of lists | numpy.array with dimension 2): Susceptance matrix of all nodes
+    max_eigval (float): Upper bound for maximum eigenvalue of B
+    C (float): Lower bound for minimum eigenvalue of B
+    gen_nodes (QuantumRegister): Contains qubits each representing a generator node
+    tot_nodes (QuantumRegister): Contains qubits where each basis state represents a node
+    stat_prep_anc (QuantumRegister): Contains one qubit used to prepare the initial state
+    hhl_phase_reg (QuantumRegister): Register of qubits for storing eigenvalues during HHL
+    hhl_anc (QuantumRegister): Contains one qubit used for eigenvalue inversion during HHL
+    num_time_slices (int): Number of time slices used for trotterized hamiltonian evolution
+
+    Returns:
+    hhl_circ (QuantumCircuit): Quantum circuit that performs HHL
+
+    """
+
 
     print("Constructing HHL Circuit")
 
@@ -107,8 +127,6 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     evolution_op = (H).exp_i()
 
-    num_time_slices=3
-
     trotterized_op = PauliTrotterEvolution(
                     trotter_mode='trotter',
                     reps=num_time_slices).convert(evolution_op)
@@ -151,20 +169,56 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     return(hhl_circ)
 
+
+
+
+
+
+
+
+
+
+
 def create_QAOA_ansatz(
     timestep_count, gen_node_count, real_powers, hhl_phase_qubit_count, qadc_qubit_count,
     running_costs, on_off_costs, line_costs, B, max_eigval, C,
-    gamma_values, beta_values
+    no_layers
+    # gamma_values, beta_values
     ):
 
-    if len(beta_values)!=len(gamma_values):
-        raise
-    no_layers=len(gamma_values)
-    gamma=ParameterVector(no_layers)
-    beta=ParameterVector(no_layers)
+    """
+    Creates a parametrized QAOA ansatz circuit.
+
+    Parameters:
+    timestep_count (int): Number of timesteps in our UC problem
+    gen_node_count (int): Number of generator nodes
+    real_powers (2d numpy.array | list of lists): Real powers with time of all nodes
+    hhl_phase_qubit_count (int): Number of qubits to store eigenvalues in HHL procedure
+    qadc_qubit_count (int): Number of qubits to store output of amplitude estimation
+    running_costs (numpy.array | list): Costs of keeping a generator node running for a timestep
+    on_off_costs (list with length 2, each element is a list or array): on_off_costs[0] contains costs of turning a generator node on
+                                                                        on_off_costs[1] contains costs of turning a generator node off
+    line_costs (list of lists | numpy.array with dimension 2): line_costs[i][j] contains the cost of transmission per unit power
+                                                               per unit time of the line connecting nodes i and j
+    B (list of lists | numpy.array with dimension 2): Susceptance matrix of all nodes
+    max_eigval (float): Upper bound for maximum eigenvalue of B
+    C (float): Lower bound for minimum eigenvalue of B
+    no_layers (int): Number of layers in QAOA
+
+    Returns:
+    qc (QuantumCircuit): Parametrized circuit for QAOA
+
+    """
+
+    # if len(beta_values)!=len(gamma_values):
+    #     raise
+    # no_layers=len(gamma_values)
+    params=ParameterVector(2*no_layers)
+
+    node_count=len(real_powers)
 
     gen_nodes=[QuantumRegister(gen_node_count) for i in range(timestep_count)]
-    tot_nodes=QuantumRegister(int(np.ceil(np.log2(len(real_powers)+1))))
+    tot_nodes=QuantumRegister(int(np.ceil(np.log2(node_count))))
     state_prep_anc=QuantumRegister(1)
     hhl_phase_reg=QuantumRegister(hhl_phase_qubit_count)
     hhl_anc=QuantumRegister(1)
@@ -173,15 +227,14 @@ def create_QAOA_ansatz(
 
     output_reg=[ClassicalRegister(gen_node_count) for i in range(timestep_count)]
 
-    qc=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,output_reg)
+    qc=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg)
 
     # Use HHL Phase reg for penalty adder
     qft=QuantumCircuit(hhl_phase_qubit_count)
     qft_rotations(qft, hhl_phase_qubit_count)
 
-    hhl_circ=create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
-
-    qc.h(gen_nodes)
+    for gen_nodes_reg in gen_nodes:
+        qc.h(gen_nodes_reg)
 
     for layer_index in range(no_layers):
 
@@ -190,29 +243,32 @@ def create_QAOA_ansatz(
         # Running costs
         for t in range(timestep_count):
             for i in range(gen_node_count):
-                qc.rz(gamma[layer_index]*running_costs[i], gen_nodes[t][i])
+                qc.rz(params[layer_index]*running_costs[i], gen_nodes[t][i])
 
         # On off costs
         for t in range(timestep_count-1):
             for i in range(gen_node_count):
                 # On costs
                 qc.x(gen_nodes[t][i])
-                qc.crz(gamma[layer_index]*on_off_costs[0][i], gen_nodes[t][i], gen_nodes[t+1][i])
+                qc.crz(params[layer_index]*on_off_costs[0][i], gen_nodes[t][i], gen_nodes[t+1][i])
                 qc.x(gen_nodes[t][i])
 
+                # Off costs
                 qc.x(gen_nodes[t+1][i])
-                qc.crz(gamma[layer_index]*on_off_costs[0][i], gen_nodes[t][i], gen_nodes[t+1][i])
+                qc.crz(params[layer_index]*on_off_costs[1][i], gen_nodes[t][i], gen_nodes[t+1][i])
                 qc.x(gen_nodes[t+1][i])
 
         # Transmission Costs
-        for i in range(gen_node_count):
-            for j in range(i):
-                C_L=line_costs[i][j]
 
-                exp_k_abs_cos_circuit=construct_exp_k_abs_cos_circuit(qadc_qubit_count,4,C_L*np.linalg.norm(np.array(real_powers))*gamma[layer_index])
+        for t in range(timestep_count):
+            hhl_circ=create_hhl_circ([r[t] for r in real_powers[1:]],B,max_eigval,C,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
+            for i in range(node_count):
+                for j in range(i):
+                    C_L=line_costs[i][j]
 
-                if C_L:
-                    for t in range(timestep_count):
+                    if C_L:
+
+                        exp_k_abs_cos_circuit=construct_exp_k_abs_cos_circuit(qadc_qubit_count,4,abs(B[i][j])*C_L*np.linalg.norm(np.array(real_powers))*params[layer_index])
 
                         # Here we set the 0-th component of the statevector at the end of the hhl circuit to theta_i-theta_j
 
@@ -246,7 +302,7 @@ def create_QAOA_ansatz(
                         qc.compose(qadc_circ.inverse(), [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
 
         # Penalty Costs
-        C_P=sum(running_costs)+sum(running_costs)+sum([sum(arr) for arr in line_costs])
+        C_P=sum(running_costs)+sum(on_off_costs[0])+sum(on_off_costs[1])+sum([sum(arr) for arr in line_costs])/2
         for t in range(timestep_count):
             qc.compose(qft, qubits=hhl_phase_reg, inplace=True)
             for i in range(gen_node_count):
@@ -255,7 +311,7 @@ def create_QAOA_ansatz(
                     qc.cp(2*pi*2**(j-hhl_phase_qubit_count)*a_i,gen_nodes[i],((list(hhl_phase_reg))[::-1])[j])
                 # qc.compose(general_CZ(1.0/c_coeff,n), qubits=(list(hhl_phase_reg))[::-1]+list(gen_nodes[t]), inplace=True)
             qc.compose(qft.inverse(), qubits=hhl_phase_reg, inplace=True)
-            qc.rz(-gamma[layer_index]*C_P, gen_nodes[t][i])
+            qc.rz(-params[layer_index]*C_P, gen_nodes[t][i])
             qc.compose(qft, qubits=hhl_phase_reg, inplace=True)
             for i in range(gen_node_count):
                 a_i=real_powers[i]*2**(hhl_phase_qubit_count-1)/sum(real_powers[gen_node_count:])
@@ -268,12 +324,21 @@ def create_QAOA_ansatz(
         # Mixer layer
         for t in range(timestep_count):
             for i in range(gen_node_count):
-                qc.rx(beta[layer_index], gen_nodes[t][i])
+                qc.rx(params[no_layers+layer_index], gen_nodes[t][i])
 
     for t in range(timestep_count):
         qc.measure(gen_nodes[t], output_reg[t])
 
     return qc
+
+
+
+
+
+
+
+
+
 
 if __name__=="__main__":
     init_time=time.time()

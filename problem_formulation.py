@@ -1,9 +1,12 @@
 import numpy as np
 from scipy import special, linalg
+from scipy.optimize import minimize
+from QAOA_ansatz import create_QAOA_ansatz
+from qiskit import execute, transpile, Aer
 
 class Node:
 
-    def __init__(self, real_power, cost_prod, cost_on, cost_off):
+    def __init__(self, real_power, cost_prod=0, cost_on=0, cost_off=0):
         self.lines=[]
         self.real_power = real_power
         self.cost_prod = cost_prod
@@ -29,9 +32,16 @@ class Grid:
     A=None
 
     def __init__(self, lines, nodes, node_active):
+        self.time_step=0
         self.lines = lines
-        self.nodes = node
+        nodes.sort(reverse=True, key=lambda node:node.real_power[0])
+        nodes=[nodes[-1]]+nodes[:-1]
+        self.nodes = nodes
         self.node_active = node_active
+        if len(node_active)!=len(nodes):
+            if len(node_active)!=len([node for node in nodes if node.real_power[0]>0]):
+                raise
+            node_active=[True]+node_active+[True for _ in range(len(nodes)-len(node_active)-1)]
         self.avg_susceptance=0
         for line in lines:
             line.node1.add_line(line)
@@ -45,11 +55,20 @@ class Grid:
         self.construct_b_vector()
         self.construct_A_matrix()
 
+    def set_timestep(self, t):
+        self.time_step=t
+
     def set_active_nodes(self, node_active):
-        self.node_active = node_active
+        node_active = [bool(el) for el in node_active]
+        self.node_active=node_active
+        if len(node_active)!=len(self.nodes):
+            if len(node_active)!=len([node for node in self.nodes if node.real_power[self.time_step]>0]):
+                raise
+            self.node_active=[True]+node_active+[True for _ in range(len(self.nodes)-len(node_active)-1)]
+        # self
         self.construct_b_vector()
-        self.construct_A_matrix()
-        self.construct_D_matrix()
+        # self.construct_A_matrix()
+        # self.construct_D_matrix()
 
 
     def get_line_from_nodes(self, node1, node2):
@@ -59,7 +78,7 @@ class Grid:
         return None
 
     def construct_b_vector(self):
-        self.b=np.array([node.real_power * int(self.node_active[self.nodes.index(node)]) for node in self.nodes])
+        self.b=np.array([node.real_power[self.time_step] * int(self.node_active[self.nodes.index(node)]) for node in self.nodes])
 
     def construct_A_matrix(self):
         self.A=np.zeros([len(self.nodes),len(self.nodes)])
@@ -69,8 +88,10 @@ class Grid:
             for j in range(len(self.nodes)):
                 if i==j:
                     continue
-                self.A[i,i]+=self.get_line_from_nodes(self.nodes[i], self.nodes[j]).susceptance
-                self.A[i,j]-=self.get_line_from_nodes(self.nodes[i], self.nodes[j]).susceptance
+                line=self.get_line_from_nodes(self.nodes[i], self.nodes[j])
+                if line:
+                    self.A[i,i]+=line.susceptance
+                    self.A[i,j]-=line.susceptance
         self.eigenvalue_est_A()
 
     def eigenvalue_est_A(self):
@@ -92,15 +113,91 @@ class Grid:
 class UCProblem:
 
     def __init__(self, lines, nodes, timestep_count):
+        nodes.sort(reverse=True, key=lambda node:node.real_power[0])
         self.nodes = nodes
+        self.gen_nodes = [node for node in nodes if node.real_power[0]>0]
         self.lines = lines
         self.timestep_count = timestep_count
-        self.grid_timesteps = [Grid(lines, nodes, [True for _ in nodes]) for t in timestep_count]
+        self.grid_timesteps = Grid(lines, nodes, [True for _ in nodes])
+        self.par_qaoa_circ = None
 
     def compute_cost(self, bitstring):
         if len(bitstring) != self.timestep_count * len(self.nodes):
             raise
 
-        # TODO
+        cost=0
+        A=self.grid_timesteps.A
+        for j in range(self.timestep_count-1):
+            for i in range(len(self.gen_nodes)):
+                cost+=bitstring[j*len(self.gen_nodes)+i]*self.gen_nodes[i].cost_prod
+                cost+=bitstring[j*len(self.gen_nodes)+i]*(1-bitstring[(j+1)*len(self.gen_nodes)+i])*self.gen_nodes[i].cost_off
+                cost+=bitstring[(j+1)*len(self.gen_nodes)+i]*(1-bitstring[j*len(self.gen_nodes)+i])*self.gen_nodes[i].cost_on
 
+            self.grid_timesteps.set_timestep(j)
+            self.grid_timesteps.set_active_nodes(bitstring[j*len(self.gen_nodes):(j+1)*len(self.gen_nodes)])
+            b=self.grid_timesteps.b
+            A_inv=linalg.inv(A)
+            x=A_inv @ b
+            for p in range(len(x)):
+                for q in range(p):
+                    line=self.grid_timesteps.get_line_from_nodes(self.nodes[p], self.nodes[q])
+                    if line:
+                        cost+=line.cost_per_watt*abs(line.susceptance*(x[p]-x[q]))
+        
+        return cost
     
+    def create_and_store_QAOA_ansatz(self, no_layers=3):
+
+        B=self.grid_timesteps.A
+        # self.grid_timesteps.eigenvalue_est_A()
+        C, max_eigval=self.grid_timesteps.A_eig_bounds
+        line_costs=np.zeros((len(self.nodes), len(self.nodes)))
+
+        for i in range(len(self.nodes)):
+            for j in range(i):
+                line=self.grid_timesteps.get_line_from_nodes(self.nodes[i], self.nodes[j])
+                if line:
+                    line_costs[i][j]=line.cost_per_watt
+                    line_costs[j][i]=line.cost_per_watt
+
+
+        self.par_qaoa_circ=create_QAOA_ansatz(self.timestep_count, len(self.gen_nodes),
+        [node.real_power for node in self.nodes], 4, 4, [node.cost_prod for node in self.gen_nodes],
+        [[node.cost_on for node in self.gen_nodes],[node.cost_off for node in self.gen_nodes]], line_costs,
+        B, max_eigval, C, no_layers)
+        self.backend=Aer.get_backend('aer_simulator')
+        self.par_qaoa_circ=transpile(self.par_qaoa_circ, self.backend)
+
+    def get_QAOA_circuit_with_set_parameters(self, params):
+        if self.par_qaoa_circ==None:
+            self.create_and_store_QAOA_ansatz(int(len(params)/2))
+        circ=self.par_qaoa_circ.bind_parameters(params)
+        return circ
+    
+    def estimate_circ_cost(self, params):
+        circ=self.get_QAOA_circuit_with_set_parameters(params)
+        counts = self.backend.run(circ, nshots=512).result().get_counts()
+        print(counts)
+        cost=0
+        for key in counts.keys():
+            bitstring="".join(key.split())
+            cost+=self.compute_cost(bitstring)*counts[key]
+        return cost
+        
+    
+    def find_optimum_solution(self, initial_guess=[0.33,0.66,1,1,0.66,0.33]):
+        res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
+        print(res)
+
+
+if __name__=="__main__":
+    node1=Node([2,2], 2, 1, 1)
+    node2=Node([1,1], 1, 2, 1)
+    node3=Node([-1.5,-1])
+    node4=Node([-1,0])
+    line1=Line(node1,node3,1,1)
+    line2=Line(node2,node3,1,1)
+    line3=Line(node4,node3,1,1)
+    
+    problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3], 2)
+    problem_instance.find_optimum_solution()
