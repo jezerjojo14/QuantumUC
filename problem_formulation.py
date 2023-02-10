@@ -5,8 +5,20 @@ from QAOA_ansatz import create_QAOA_ansatz
 from qiskit import execute, transpile, Aer
 
 class Node:
+    """
+    Creates a new node.
+
+    real_power (list of floats): Power generated (demand if negative) by the node for different time steps
+                                    All elements should be equal if node is a generator
+    cost_prod (float): Cost of keeping a generator node running (0 if load node)
+    cost_on (float): Cost of turning a generator node on (0 if load node)
+    cost_off (float): Cost of turning a generator node off (0 if load node)
+
+    lines (list of Line objects): Lines connected to the node
+    """
 
     def __init__(self, real_power, cost_prod=0, cost_on=0, cost_off=0):
+
         self.lines=[]
         self.real_power = real_power
         self.cost_prod = cost_prod
@@ -19,19 +31,33 @@ class Node:
 
 
 class Line:
+    """
+    Creates a new line.
 
-    def __init__(self, node1, node2, susceptance, cost_per_watt):
+    node1 (Node): First node it's connected to
+    node2 (Node): Second node it's connected to
+    susceptance (float): Susceptance of the line
+    cost_of_line (float): Cost of using the line per unit power per unit time
+    """
+
+    def __init__(self, node1, node2, susceptance, cost_of_line):
         self.node1 = node1
         self.node2 = node2
         self.susceptance = susceptance
-        self.cost_per_watt = cost_per_watt
+        self.cost_of_line = cost_of_line
 
 class Grid:
+    """
+    Creates a power grid instance.
 
-    b=None
-    A=None
+    time_step (int): The current time step
+    node_active (list of booleans): 
+    b (list | numpy.array): Po
+    """
 
     def __init__(self, lines, nodes, node_active):
+        self.b=None
+        self.A=None
         self.time_step=0
         self.lines = lines
         nodes.sort(reverse=True, key=lambda node:node.real_power[0])
@@ -101,7 +127,7 @@ class Grid:
         while True:
             t = (self.A - eig_max_upp_bound*np.eye(len(self.nodes))) @ t
             if abs(linalg.norm(t)-eig)<0.0001:
-                print(t/linalg.norm(t))
+                # print(t/linalg.norm(t))
                 break
             eig=linalg.norm(t)
             t=t/eig
@@ -142,7 +168,7 @@ class UCProblem:
                 for q in range(p):
                     line=self.grid_timesteps.get_line_from_nodes(self.nodes[p], self.nodes[q])
                     if line:
-                        cost+=line.cost_per_watt*abs(line.susceptance*(x[p]-x[q]))
+                        cost+=line.cost_of_line*abs(line.susceptance*(x[p]-x[q]))
         
         return cost
     
@@ -157,8 +183,8 @@ class UCProblem:
             for j in range(i):
                 line=self.grid_timesteps.get_line_from_nodes(self.nodes[i], self.nodes[j])
                 if line:
-                    line_costs[i][j]=line.cost_per_watt
-                    line_costs[j][i]=line.cost_per_watt
+                    line_costs[i][j]=line.cost_of_line
+                    line_costs[j][i]=line.cost_of_line
 
 
         self.par_qaoa_circ=create_QAOA_ansatz(self.timestep_count, len(self.gen_nodes),
@@ -175,6 +201,7 @@ class UCProblem:
         return circ
     
     def estimate_circ_cost(self, params):
+        print(params)
         circ=self.get_QAOA_circuit_with_set_parameters(params)
         counts = self.backend.run(circ, nshots=512).result().get_counts()
         print(counts)
@@ -185,7 +212,7 @@ class UCProblem:
         return cost
         
     
-    def find_optimum_solution(self, initial_guess=[0.33,0.66,1,1,0.66,0.33]):
+    def find_optimum_solution(self, initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):
         res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
         print(res)
 

@@ -75,12 +75,15 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     real_powers=np.concatenate((real_powers, np.array([0 for _ in range(extra_dim)])))
     B=np.array(B)
+    print("Initial B:", B)
     B=B*2*pi*(2**(len(hhl_phase_reg)-1))/(max_eigval*(2**len(hhl_phase_reg)))
 
     B=np.concatenate((B, np.zeros((extra_dim, len(list(B))))))
     B=np.concatenate((B, np.zeros((len(list(B)), extra_dim))), axis=1)
     for i in range(extra_dim):
         B[-i][-i]=1
+
+    print("Final B:", B)
 
     # State prep
 
@@ -111,6 +114,8 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
         H=H^I
     
     H=0*H
+
+    print(H)
 
     paulis=[I,X,Y,Z]
 
@@ -213,7 +218,7 @@ def create_QAOA_ansatz(
     # if len(beta_values)!=len(gamma_values):
     #     raise
     # no_layers=len(gamma_values)
-    params=ParameterVector(2*no_layers)
+    params=ParameterVector('p', 2*no_layers)
 
     node_count=len(real_powers)
 
@@ -241,6 +246,8 @@ def create_QAOA_ansatz(
         # Cost layer
 
         # Running costs
+        print("layer_index", layer_index)
+        print("params", params)
         for t in range(timestep_count):
             for i in range(gen_node_count):
                 qc.rz(params[layer_index]*running_costs[i], gen_nodes[t][i])
@@ -261,7 +268,7 @@ def create_QAOA_ansatz(
         # Transmission Costs
 
         for t in range(timestep_count):
-            hhl_circ=create_hhl_circ([r[t] for r in real_powers[1:]],B,max_eigval,C,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
+            hhl_circ=create_hhl_circ([r[t] for r in real_powers],B,max_eigval,C,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
             for i in range(node_count):
                 for j in range(i):
                     C_L=line_costs[i][j]
