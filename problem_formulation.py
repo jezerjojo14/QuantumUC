@@ -1,8 +1,8 @@
 import numpy as np
-from scipy import special, linalg
+from scipy import linalg
 from scipy.optimize import minimize
 from QAOA_ansatz import create_QAOA_ansatz
-from qiskit import execute, transpile, Aer
+from qiskit import transpile, Aer
 
 class Node:
     """
@@ -91,11 +91,8 @@ class Grid:
             if len(node_active)!=len([node for node in self.nodes if node.real_power[self.time_step]>0]):
                 raise
             self.node_active=[True]+node_active+[True for _ in range(len(self.nodes)-len(node_active)-1)]
-        # self
         self.construct_b_vector()
-        # self.construct_A_matrix()
-        # self.construct_D_matrix()
-
+        
 
     def get_line_from_nodes(self, node1, node2):
         for line in node1.lines:
@@ -127,7 +124,6 @@ class Grid:
         while True:
             t = (self.A - eig_max_upp_bound*np.eye(len(self.nodes))) @ t
             if abs(linalg.norm(t)-eig)<0.0001:
-                # print(t/linalg.norm(t))
                 break
             eig=linalg.norm(t)
             t=t/eig
@@ -175,7 +171,6 @@ class UCProblem:
     def create_and_store_QAOA_ansatz(self, no_layers=3):
 
         B=self.grid_timesteps.A
-        # self.grid_timesteps.eigenvalue_est_A()
         C, max_eigval=self.grid_timesteps.A_eig_bounds
         line_costs=np.zeros((len(self.nodes), len(self.nodes)))
 

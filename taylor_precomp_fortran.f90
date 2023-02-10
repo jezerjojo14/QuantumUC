@@ -2,7 +2,6 @@ real function fact(n)
 
     integer, intent(in) :: n
     integer :: i
-    ! print *, n
 
     if (n < 0) error stop 'factorial is singular for negative integers'
     fact = 1.0d0
@@ -10,7 +9,6 @@ real function fact(n)
         fact = fact * i
     enddo
 
-    ! print *, fact
 end function fact
 
 recursive subroutine add_to_output(power, s, partition_index, expression, output_expression, n, partition, qubits)
@@ -37,17 +35,10 @@ recursive subroutine add_to_output(power, s, partition_index, expression, output
         if ( s /= 0 ) then
             qubits_new=1
         endif
-        ! print *, "Partition", partition
-        ! print *, "Qubits", qubits
-        ! print *, (/((2**i)*qubits(i+1), i=0,n-1)/)
         j=sum((/((2**i)*qubits_new(i+1), i=0,n-1)/))
-        ! print *, output_expression
-        ! print *, "j: ", j
         output_expression(j+1)=output_expression(j+1)+ &
             product((/(expression(i+1)**partition_new(i+1), i=0,(2**n)-1)/)) &
             *(fact(power)/product((/(fact(partition_new(i)), i=1,(2**n))/)))
-        ! print *, "Updated output:", output_expression
-        ! qubits=qubits_new
 
     else
         do i = 0, s
@@ -65,7 +56,6 @@ recursive subroutine add_to_output(power, s, partition_index, expression, output
                 enddo
             endif
             call add_to_output(power, s-i, partition_index+1, expression, output_expression, n, partition_new, qubits_new)
-            ! qubits=qubits_new
         end do
     endif
 end subroutine add_to_output
@@ -80,8 +70,6 @@ subroutine power_expansion(n, expression, output_expression, power)
 
     integer :: partition(2**n)
 
-    ! integer :: partitions(2**n:int((fact((2**n)+power-1))/(fact((2**n)-1)*fact(power-((2**n) - 1)))))
-    
     output_expression=0.0
     qubits=0
 
@@ -110,7 +98,7 @@ program precomp
     endinterface
 
     num_args = command_argument_count()
-    allocate(args(num_args))  ! I've omitted checking the return status of the allocation 
+    allocate(args(num_args))
     allocate(real_args(num_args-2))
     allocate(output(num_args-2))
 
@@ -123,10 +111,8 @@ program precomp
         else
             read(args(ix), *) real_args(ix-1)
         endif
-        ! now parse the argument as you wish
     end do
     
-    ! call power_expansion(3, (/ 0.0,3.0,5.0,0.0,7.0,0.0,0.0,0.0 /), output_expression=output, power=2)
     call power_expansion((int_args(1)), (/ (real_args(ix), ix=1,num_args-2) /), output_expression=output, power=int_args(2))
     print *, output
 end program precomp

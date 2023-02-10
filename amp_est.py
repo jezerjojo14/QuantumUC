@@ -1,6 +1,5 @@
-from qiskit import QuantumCircuit, Aer, transpile, QuantumRegister, ClassicalRegister, assemble
-from math import pi, cos, sin
-from qiskit.visualization import plot_histogram
+from qiskit import QuantumCircuit, Aer, transpile, QuantumRegister, ClassicalRegister
+from math import pi, cos
 import numpy as np
 from qiskit.quantum_info import Statevector
 import random

@@ -2,14 +2,13 @@ import numpy as np
 from scipy import linalg
 
 from math import pi
-from qiskit import QuantumCircuit, transpile, QuantumRegister, ClassicalRegister, assemble
+from qiskit import QuantumCircuit, transpile, QuantumRegister, ClassicalRegister
 from qiskit.providers.aer import Aer
 from qiskit.circuit import ParameterVector
-# from qiskit.circuit.library.data_preparation.state_preparation import prepare_state
+from qiskit.circuit.library.data_preparation.state_preparation import StatePreparation
 
-from qiskit.opflow import PauliTrotterEvolution, StateFn, PauliExpectation
-from qiskit.opflow import CircuitSampler, PauliOp
-from qiskit.opflow import I, X, Y, Z, Zero, One, Plus, Minus
+from qiskit.opflow import PauliTrotterEvolution
+from qiskit.opflow import I, X, Y, Z
 
 from amp_est import real_amp_est
 from taylor_precomputation import construct_asin_x_inv_circuit, construct_exp_k_abs_cos_circuit
@@ -87,7 +86,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # State prep
 
-    hhl_circ.isometry(real_powers,[],tot_nodes)
+    hhl_circ.append(StatePreparation(real_powers), tot_nodes)
     hhl_circ.x(gen_nodes)
 
     for i in range(len(gen_nodes)):
@@ -280,7 +279,7 @@ def create_QAOA_ansatz(
                         # Here we set the 0-th component of the statevector at the end of the hhl circuit to theta_i-theta_j
 
                             # Move theta_i to 0th component of statevector, also update j accordingly to track the position of theta_j
-                        for k in range(tot_nodes):
+                        for k in range(len(tot_nodes)):
                             if i%(2**(k+1))>=2**k:
                                 hhl_circ.x(tot_nodes[k])
                                 if j%(2**(k+1))>=2**k:
@@ -288,7 +287,7 @@ def create_QAOA_ansatz(
                                 else:
                                     j+=2**k
                             # Set k to be the position of the most significant 1 in binary expansion of j
-                        k=tot_nodes-1
+                        k=len(tot_nodes)-1
                         while True:
                             if j<2**k:
                                 k-=1
