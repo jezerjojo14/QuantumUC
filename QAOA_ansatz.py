@@ -70,8 +70,11 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
     current_dir=os.getcwd()
     circuits_dir=os.path.join(current_dir, "circuits")
     
+    circuit_key="HHL_"+str(real_powers)+"_"+str(B)+"_"+str(max_eigval)+"_"+str(C)+\
+                "_"+str(len(hhl_phase_reg))+"_"+str(num_time_slices)
+
     try:
-        circuit_ID=circuit_IDs["HHL"][str(real_powers)][str(B)][str(max_eigval)][str(C)][str(len(hhl_phase_reg))][str(num_time_slices)]
+        circuit_ID=circuit_IDs[circuit_key]
         with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'rb') as fd:
             circuit = qpy_serialization.load(fd)[0]
         return circuit
@@ -189,7 +192,8 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     circuit_ID=len(os.listdir(circuits_dir))
 
-    circuit_IDs["HHL"][str(real_powers)][str(B)][str(max_eigval)][str(C)][str(len(hhl_phase_reg))][str(num_time_slices)]=circuit_ID
+    circuit_IDs[circuit_key]=circuit_ID
+    
     with open("circuit_ID.json", 'w', encoding='utf-8') as f:
         json.dump(circuit_IDs, f, ensure_ascii=False, indent=4)
     
@@ -243,6 +247,27 @@ def create_QAOA_ansatz(
     # if len(beta_values)!=len(gamma_values):
     #     raise
     # no_layers=len(gamma_values)
+
+    if consider_transmission_costs:
+        with open("circuit_ID.json") as f:
+            circuit_IDs=json.load(f)
+
+        current_dir=os.getcwd()
+        circuits_dir=os.path.join(current_dir, "circuits")
+
+        circuit_key="QAOA_"+"_"+str(timestep_count)+"_"+str(gen_node_count)+"_"+str(real_powers)+\
+                "_"+str(hhl_phase_qubit_count)+"_"+str(qadc_qubit_count)+"_"+str(running_costs)+\
+                "_"+str(on_off_costs)+"_"+str(line_costs)+"_"+str(B)+"_"+str(max_eigval)+\
+                "_"+str(C)+"_"+str(no_layers)
+        
+        try:
+            circuit_ID=circuit_IDs[circuit_key]
+            with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'rb') as fd:
+                circuit = qpy_serialization.load(fd)[0]
+            return circuit
+        except:
+            print("Constructing QAOA Circuit")
+
     params=ParameterVector('p', 2*no_layers)
 
     node_count=len(real_powers)
@@ -329,8 +354,33 @@ def create_QAOA_ansatz(
                                     hhl_circ.cx(tot_nodes[k],tot_nodes[l])
                             hhl_circ.h(k)
                             hhl_circ.x(k)
+
+                            with open("circuit_ID.json") as f:
+                                circuit_IDs=json.load(f)
+
+                            current_dir=os.getcwd()
+                            circuits_dir=os.path.join(current_dir, "circuits")
                             
-                            qadc_circ=real_amp_est(gen_node_count+len(tot_nodes)+2+hhl_phase_qubit_count,0,hhl_circ,qadc_qubit_count)
+                            circuit_key="QADC_"+str(real_powers)+"_"+str(B)+"_"+str(max_eigval)+"_"+str(C)+\
+                                        "_"+str(len(hhl_phase_reg))+"_"+str(qadc_qubit_count)
+
+                            try:
+                                circuit_ID=circuit_IDs[circuit_key]
+                                with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'rb') as fd:
+                                    qadc_circ = qpy_serialization.load(fd)[0]
+                            except:
+                                print("Constructing HHL Circuit")
+                                qadc_circ=real_amp_est(gen_node_count+len(tot_nodes)+2+hhl_phase_qubit_count,0,hhl_circ,qadc_qubit_count)
+
+                                circuit_ID=len(os.listdir(circuits_dir))
+
+                                circuit_IDs[circuit_key]=circuit_ID
+                                
+                                with open("circuit_ID.json", 'w', encoding='utf-8') as f:
+                                    json.dump(circuit_IDs, f, ensure_ascii=False, indent=4)
+                                
+                                with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'wb') as fd:
+                                    qpy_serialization.dump(hhl_circ, fd)
 
                             qc.compose(qadc_circ, [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
                             qc.compose(exp_k_abs_cos_circuit, qadc_reg)
@@ -366,6 +416,20 @@ def create_QAOA_ansatz(
 
     for t in range(timestep_count):
         qc.measure(gen_nodes[t], output_reg[t])
+
+
+
+    if consider_transmission_costs:
+
+        circuit_ID=len(os.listdir(circuits_dir))
+
+        circuit_IDs[circuit_key]=circuit_ID
+        
+        with open("circuit_ID.json", 'w', encoding='utf-8') as f:
+            json.dump(circuit_IDs, f, ensure_ascii=False, indent=4)
+        
+        with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'wb') as fd:
+            qpy_serialization.dump(hhl_circ, fd)
 
     return qc
 
