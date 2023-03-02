@@ -1,0 +1,255 @@
+M:\academics\Projects\QARLab\DCPowerFlow\UnitCommitment>python problem_formulation.py
+[0.33 0.66 1.   1.   0.66 0.33]
+Total number of qubits in our circuit: 17
+layer_index 0
+params p, ['p[0]', 'p[1]', 'p[2]', 'p[3]', 'p[4]', 'p[5]']
+Constructing HHL Circuit
+Initial B: [[ 3. -1. -1.]
+ [-1.  1.  0.]
+ [-1.  0.  1.]]
+Final B: [[ 1.         -0.62831853 -0.62831853  0.        ]
+ [-0.62831853  0.62831853  0.          0.        ]
+ [-0.62831853  0.          0.62831853  0.        ]
+ [ 0.          0.          0.          0.        ]]
+0.0 * II
+Constructing asin(x^-1) circuit
+Constructing exp(k|cos(x)|)
+           ┌─────────────┐
+q8_0: ─────┤0            ├──────────
+           │             │
+q8_1: ─────┤1            ├──────────
+           │             │
+q8_2: ─────┤2            ├──────────
+           │             │
+q8_3: ─────┤3            ├──────────
+           │             │
+q8_4: ─────┤4            ├──────────
+           │  circuit-98 │
+q8_5: ─────┤5            ├──────────
+           │             │
+q8_6: ─────┤6            ├──────────
+           │             │
+q8_7: ─────┤7            ├──────────
+           │             │
+q8_8: ─────┤8            ├──────────
+           │             │
+q8_9: ─────┤9            ├──────────
+      ┌───┐└──────┬──────┘┌───┐┌───┐
+ q10: ┤ H ├───────■───────┤ X ├┤ H ├
+      └───┘               └───┘└───┘
+           ┌───────────────────┐┌───┐       ┌───┐┌────────────────┐
+q8_0: ─────┤0                  ├┤ X ├─■─────┤ X ├┤0               ├
+           │                   │├───┤ │     ├───┤│                │
+q8_1: ─────┤1                  ├┤ X ├─■─────┤ X ├┤1               ├
+           │                   │├───┤ │     ├───┤│                │
+q8_2: ─────┤2                  ├┤ X ├─■─────┤ X ├┤2               ├
+           │                   │├───┤ │     ├───┤│                │
+q8_3: ─────┤3                  ├┤ X ├─■─────┤ X ├┤3               ├
+           │                   │├───┤ │     ├───┤│                │
+q8_4: ─────┤4                  ├┤ X ├─■─────┤ X ├┤4               ├
+           │                   │├───┤ │     ├───┤│                │
+q8_5: ─────┤5  circuit-1517_dg ├┤ X ├─■─────┤ X ├┤5  circuit-1517 ├
+           │                   │├───┤ │     ├───┤│                │
+q8_6: ─────┤6                  ├┤ X ├─■─────┤ X ├┤6               ├
+           │                   │├───┤ │     ├───┤│                │
+q8_7: ─────┤7                  ├┤ X ├─■─────┤ X ├┤7               ├
+           │                   │├───┤ │     ├───┤│                │
+q8_8: ─────┤8                  ├┤ X ├─■─────┤ X ├┤8               ├
+           │                   │├───┤ │     ├───┤│                │
+q8_9: ─────┤9                  ├┤ X ├─■─────┤ X ├┤9               ├
+      ┌───┐│                   │├───┤ │P(π) ├───┤│                │
+ q10: ┤ Z ├┤10                 ├┤ X ├─■─────┤ X ├┤10              ├
+      └───┘└───────────────────┘└───┘       └───┘└────────────────┘
+Constructing exp(k|cos(x)|)
+             ┌─────────────┐
+q308_0: ─────┤0            ├──────────
+             │             │
+q308_1: ─────┤1            ├──────────
+             │             │
+q308_2: ─────┤2            ├──────────
+             │             │
+q308_3: ─────┤3            ├──────────
+             │             │
+q308_4: ─────┤4            ├──────────
+             │  circuit-98 │
+q308_5: ─────┤5            ├──────────
+             │             │
+q308_6: ─────┤6            ├──────────
+             │             │
+q308_7: ─────┤7            ├──────────
+             │             │
+q308_8: ─────┤8            ├──────────
+             │             │
+q308_9: ─────┤9            ├──────────
+        ┌───┐└──────┬──────┘┌───┐┌───┐
+  q310: ┤ H ├───────■───────┤ X ├┤ H ├
+        └───┘               └───┘└───┘
+             ┌───────────────────────┐┌───┐       ┌───┐┌────────────────────┐
+q308_0: ─────┤0                      ├┤ X ├─■─────┤ X ├┤0                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_1: ─────┤1                      ├┤ X ├─■─────┤ X ├┤1                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_2: ─────┤2                      ├┤ X ├─■─────┤ X ├┤2                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_3: ─────┤3                      ├┤ X ├─■─────┤ X ├┤3                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_4: ─────┤4                      ├┤ X ├─■─────┤ X ├┤4                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_5: ─────┤5  circuit-26590860_dg ├┤ X ├─■─────┤ X ├┤5  circuit-26590860 ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_6: ─────┤6                      ├┤ X ├─■─────┤ X ├┤6                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_7: ─────┤7                      ├┤ X ├─■─────┤ X ├┤7                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_8: ─────┤8                      ├┤ X ├─■─────┤ X ├┤8                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q308_9: ─────┤9                      ├┤ X ├─■─────┤ X ├┤9                   ├
+        ┌───┐│                       │├───┤ │P(π) ├───┤│                    │
+  q310: ┤ Z ├┤10                     ├┤ X ├─■─────┤ X ├┤10                  ├
+        └───┘└───────────────────────┘└───┘       └───┘└────────────────────┘
+Constructing HHL Circuit
+Initial B: [[ 3. -1. -1.]
+ [-1.  1.  0.]
+ [-1.  0.  1.]]
+Final B: [[ 1.         -0.62831853 -0.62831853  0.        ]
+ [-0.62831853  0.62831853  0.          0.        ]
+ [-0.62831853  0.          0.62831853  0.        ]
+ [ 0.          0.          0.          0.        ]]
+0.0 * II
+Constructing asin(x^-1) circuit
+Constructing exp(k|cos(x)|)
+             ┌───────────────────┐
+q608_0: ─────┤0                  ├──────────
+             │                   │
+q608_1: ─────┤1                  ├──────────
+             │                   │
+q608_2: ─────┤2                  ├──────────
+             │                   │
+q608_3: ─────┤3                  ├──────────
+             │                   │
+q608_4: ─────┤4                  ├──────────
+             │  circuit-53181390 │
+q608_5: ─────┤5                  ├──────────
+             │                   │
+q608_6: ─────┤6                  ├──────────
+             │                   │
+q608_7: ─────┤7                  ├──────────
+             │                   │
+q608_8: ─────┤8                  ├──────────
+             │                   │
+q608_9: ─────┤9                  ├──────────
+        ┌───┐└─────────┬─────────┘┌───┐┌───┐
+  q610: ┤ H ├──────────■──────────┤ X ├┤ H ├
+        └───┘                     └───┘└───┘
+             ┌───────────────────────┐┌───┐       ┌───┐┌────────────────────┐
+q608_0: ─────┤0                      ├┤ X ├─■─────┤ X ├┤0                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_1: ─────┤1                      ├┤ X ├─■─────┤ X ├┤1                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_2: ─────┤2                      ├┤ X ├─■─────┤ X ├┤2                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_3: ─────┤3                      ├┤ X ├─■─────┤ X ├┤3                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_4: ─────┤4                      ├┤ X ├─■─────┤ X ├┤4                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_5: ─────┤5  circuit-53182809_dg ├┤ X ├─■─────┤ X ├┤5  circuit-53182809 ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_6: ─────┤6                      ├┤ X ├─■─────┤ X ├┤6                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_7: ─────┤7                      ├┤ X ├─■─────┤ X ├┤7                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_8: ─────┤8                      ├┤ X ├─■─────┤ X ├┤8                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q608_9: ─────┤9                      ├┤ X ├─■─────┤ X ├┤9                   ├
+        ┌───┐│                       │├───┤ │P(π) ├───┤│                    │
+  q610: ┤ Z ├┤10                     ├┤ X ├─■─────┤ X ├┤10                  ├
+        └───┘└───────────────────────┘└───┘       └───┘└────────────────────┘
+Constructing exp(k|cos(x)|)
+             ┌───────────────────┐
+q908_0: ─────┤0                  ├──────────
+             │                   │
+q908_1: ─────┤1                  ├──────────
+             │                   │
+q908_2: ─────┤2                  ├──────────
+             │                   │
+q908_3: ─────┤3                  ├──────────
+             │                   │
+q908_4: ─────┤4                  ├──────────
+             │  circuit-53181390 │
+q908_5: ─────┤5                  ├──────────
+             │                   │
+q908_6: ─────┤6                  ├──────────
+             │                   │
+q908_7: ─────┤7                  ├──────────
+             │                   │
+q908_8: ─────┤8                  ├──────────
+             │                   │
+q908_9: ─────┤9                  ├──────────
+        ┌───┐└─────────┬─────────┘┌───┐┌───┐
+  q910: ┤ H ├──────────■──────────┤ X ├┤ H ├
+        └───┘                     └───┘└───┘
+             ┌───────────────────────┐┌───┐       ┌───┐┌────────────────────┐
+q908_0: ─────┤0                      ├┤ X ├─■─────┤ X ├┤0                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_1: ─────┤1                      ├┤ X ├─■─────┤ X ├┤1                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_2: ─────┤2                      ├┤ X ├─■─────┤ X ├┤2                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_3: ─────┤3                      ├┤ X ├─■─────┤ X ├┤3                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_4: ─────┤4                      ├┤ X ├─■─────┤ X ├┤4                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_5: ─────┤5  circuit-79772152_dg ├┤ X ├─■─────┤ X ├┤5  circuit-79772152 ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_6: ─────┤6                      ├┤ X ├─■─────┤ X ├┤6                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_7: ─────┤7                      ├┤ X ├─■─────┤ X ├┤7                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_8: ─────┤8                      ├┤ X ├─■─────┤ X ├┤8                   ├
+             │                       │├───┤ │     ├───┤│                    │
+q908_9: ─────┤9                      ├┤ X ├─■─────┤ X ├┤9                   ├
+        ┌───┐│                       │├───┤ │P(π) ├───┤│                    │
+  q910: ┤ Z ├┤10                     ├┤ X ├─■─────┤ X ├┤10                  ├
+        └───┘└───────────────────────┘└───┘       └───┘└────────────────────┘
+capi_return is NULL
+Call-back cb_calcfc_in__cobyla__user__routines failed.
+Traceback (most recent call last):
+  File "M:\academics\Projects\QARLab\DCPowerFlow\UnitCommitment\problem_formulation.py", line 228, in <module>
+    problem_instance.find_optimum_solution()
+  File "M:\academics\Projects\QARLab\DCPowerFlow\UnitCommitment\problem_formulation.py", line 214, in find_optimum_solution
+    res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
+  File "C:\Python39\lib\site-packages\scipy\optimize\_minimize.py", line 625, in minimize
+    return _minimize_cobyla(fun, x0, args, constraints, **options)
+  File "C:\Python39\lib\site-packages\scipy\optimize\cobyla.py", line 34, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Python39\lib\site-packages\scipy\optimize\cobyla.py", line 260, in _minimize_cobyla
+    xopt, info = _cobyla.minimize(calcfc, m=m, x=np.copy(x0), rhobeg=rhobeg,
+  File "C:\Python39\lib\site-packages\scipy\optimize\cobyla.py", line 252, in calcfc
+    f = fun(x, *args)
+  File "M:\academics\Projects\QARLab\DCPowerFlow\UnitCommitment\problem_formulation.py", line 203, in estimate_circ_cost
+    circ=self.get_QAOA_circuit_with_set_parameters(params)
+  File "M:\academics\Projects\QARLab\DCPowerFlow\UnitCommitment\problem_formulation.py", line 197, in get_QAOA_circuit_with_set_parameters
+    self.create_and_store_QAOA_ansatz(int(len(params)/2))
+  File "M:\academics\Projects\QARLab\DCPowerFlow\UnitCommitment\problem_formulation.py", line 185, in create_and_store_QAOA_ansatz
+    self.par_qaoa_circ=create_QAOA_ansatz(self.timestep_count, len(self.gen_nodes),
+  File "M:\academics\Projects\QARLab\DCPowerFlow\UnitCommitment\QAOA_ansatz.py", line 310, in create_QAOA_ansatz
+    qc.compose(qadc_circ.inverse(), [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
+  File "C:\Users\Dell\AppData\Roaming\Python\Python39\site-packages\qiskit\circuit\quantumcircuit.py", line 929, in compose
+    n_op = instr.operation.copy()
+  File "C:\Users\Dell\AppData\Roaming\Python\Python39\site-packages\qiskit\circuit\instruction.py", line 427, in copy
+    cpy = self.__deepcopy__()
+  File "C:\Users\Dell\AppData\Roaming\Python\Python39\site-packages\qiskit\circuit\controlledgate.py", line 241, in __deepcopy__
+    cpy._definition = copy.deepcopy(self._definition, _memo)
+  File "C:\Python39\lib\copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "C:\Python39\lib\copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "C:\Python39\lib\copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "C:\Python39\lib\copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "C:\Python39\lib\copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "C:\Python39\lib\copy.py", line 205, in _deepcopy_list
+    append(deepcopy(a, memo))
+MemoryError

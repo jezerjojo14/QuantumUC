@@ -13,6 +13,11 @@ from qiskit.opflow import I, X, Y, Z
 from amp_est import real_amp_est
 from taylor_precomputation import construct_asin_x_inv_circuit, construct_exp_k_abs_cos_circuit
 
+from qiskit.circuit import qpy_serialization
+
+import json
+import os
+
 import time
 
 def general_CZ(F, n):
@@ -59,8 +64,19 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     """
 
+    with open("circuit_ID.json") as f:
+        circuit_IDs=json.load(f)
 
-    print("Constructing HHL Circuit")
+    current_dir=os.getcwd()
+    circuits_dir=os.path.join(current_dir, "circuits")
+    
+    try:
+        circuit_ID=circuit_IDs["HHL"][str(real_powers)][str(B)][str(max_eigval)][str(C)][str(len(hhl_phase_reg))][str(num_time_slices)]
+        with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'rb') as fd:
+            circuit = qpy_serialization.load(fd)[0]
+        return circuit
+    except:
+        print("Constructing HHL Circuit")
 
     hhl_circ=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
     hhl_circ_temp=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
@@ -171,7 +187,17 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     hhl_circ.compose(hhl_circ_temp.inverse(), inplace=True)
 
+    circuit_ID=len(os.listdir(circuits_dir))
+
+    circuit_IDs["HHL"][str(real_powers)][str(B)][str(max_eigval)][str(C)][str(len(hhl_phase_reg))][str(num_time_slices)]=circuit_ID
+    with open("circuit_ID.json", 'w', encoding='utf-8') as f:
+        json.dump(circuit_IDs, f, ensure_ascii=False, indent=4)
+    
+    with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'wb') as fd:
+        qpy_serialization.dump(hhl_circ, fd)
+    
     return(hhl_circ)
+
 
 
 
@@ -186,7 +212,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 def create_QAOA_ansatz(
     timestep_count, gen_node_count, real_powers, hhl_phase_qubit_count, qadc_qubit_count,
     running_costs, on_off_costs, line_costs, B, max_eigval, C,
-    no_layers
+    no_layers, consider_transmission_costs=True
     # gamma_values, beta_values
     ):
 
@@ -233,6 +259,8 @@ def create_QAOA_ansatz(
 
     qc=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg)
 
+    print("Total number of qubits in our circuit:", qc.num_qubits)
+
     # Use HHL Phase reg for penalty adder
     qft=QuantumCircuit(hhl_phase_qubit_count)
     qft_rotations(qft, hhl_phase_qubit_count)
@@ -266,61 +294,65 @@ def create_QAOA_ansatz(
 
         # Transmission Costs
 
-        for t in range(timestep_count):
-            hhl_circ=create_hhl_circ([r[t] for r in real_powers],B,max_eigval,C,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
-            for i in range(node_count):
-                for j in range(i):
-                    C_L=line_costs[i][j]
+        if consider_transmission_costs:
+            for t in range(timestep_count):
+                hhl_circ=create_hhl_circ([r[t] for r in real_powers],B,max_eigval,C,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
+                for i in range(node_count):
+                    for j in range(i):
+                        C_L=line_costs[i][j]
 
-                    if C_L:
+                        if C_L:
 
-                        exp_k_abs_cos_circuit=construct_exp_k_abs_cos_circuit(qadc_qubit_count,4,abs(B[i][j])*C_L*np.linalg.norm(np.array(real_powers))*params[layer_index])
+                            exp_k_abs_cos_circuit=construct_exp_k_abs_cos_circuit(qadc_qubit_count,4,abs(B[i][j])*C_L*np.linalg.norm(np.array(real_powers))*params[layer_index])
 
-                        # Here we set the 0-th component of the statevector at the end of the hhl circuit to theta_i-theta_j
+                            # Here we set the 0-th component of the statevector at the end of the hhl circuit to theta_i-theta_j
 
-                            # Move theta_i to 0th component of statevector, also update j accordingly to track the position of theta_j
-                        for k in range(len(tot_nodes)):
-                            if i%(2**(k+1))>=2**k:
-                                hhl_circ.x(tot_nodes[k])
-                                if j%(2**(k+1))>=2**k:
-                                    j-=2**k
-                                else:
-                                    j+=2**k
-                            # Set k to be the position of the most significant 1 in binary expansion of j
-                        k=len(tot_nodes)-1
-                        while True:
-                            if j<2**k:
-                                k-=1
-                                continue
-                            break
-                            # Move theta_j to 2**k-th component
-                        for l in range(k):
-                                # If l-th digit of binary expansion of j is 1
-                            if j%(2**(l+1))>=2**l:
-                                hhl_circ.cx(tot_nodes[k],tot_nodes[l])
-                        hhl_circ.h(k)
-                        hhl_circ.x(k)
-                        
-                        qadc_circ=real_amp_est(gen_node_count+len(tot_nodes)+2+hhl_phase_qubit_count,0,hhl_circ,qadc_qubit_count)
+                                # Move theta_i to 0th component of statevector, also update j accordingly to track the position of theta_j
+                            for k in range(len(tot_nodes)):
+                                if i%(2**(k+1))>=2**k:
+                                    hhl_circ.x(tot_nodes[k])
+                                    if j%(2**(k+1))>=2**k:
+                                        j-=2**k
+                                    else:
+                                        j+=2**k
+                                # Set k to be the position of the most significant 1 in binary expansion of j
+                            k=len(tot_nodes)-1
+                            while True:
+                                if j<2**k:
+                                    k-=1
+                                    continue
+                                break
+                                # Move theta_j to 2**k-th component
+                            for l in range(k):
+                                    # If l-th digit of binary expansion of j is 1
+                                if j%(2**(l+1))>=2**l:
+                                    hhl_circ.cx(tot_nodes[k],tot_nodes[l])
+                            hhl_circ.h(k)
+                            hhl_circ.x(k)
+                            
+                            qadc_circ=real_amp_est(gen_node_count+len(tot_nodes)+2+hhl_phase_qubit_count,0,hhl_circ,qadc_qubit_count)
 
-                        qc.compose(qadc_circ, [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
-                        qc.compose(exp_k_abs_cos_circuit, qadc_reg)
-                        qc.compose(qadc_circ.inverse(), [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
+                            qc.compose(qadc_circ, [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
+                            qc.compose(exp_k_abs_cos_circuit, qadc_reg)
+                            qc.compose(qadc_circ.inverse(), [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
 
         # Penalty Costs
-        C_P=sum(running_costs)+sum(on_off_costs[0])+sum(on_off_costs[1])+sum([sum(arr) for arr in line_costs])/2
+        C_P=sum(running_costs)+sum(on_off_costs[0])+sum(on_off_costs[1])
+        if consider_transmission_costs:
+            C_P+=sum([sum(arr) for arr in line_costs])/2
+   
         for t in range(timestep_count):
             qc.compose(qft, qubits=hhl_phase_reg, inplace=True)
             for i in range(gen_node_count):
-                a_i=real_powers[i]*2**(hhl_phase_qubit_count-1)/sum(real_powers[gen_node_count:])
+                a_i=real_powers[i][t]*2**(hhl_phase_qubit_count-1)/sum([-real_powers[node][t] for node in range(gen_node_count,len(real_powers))])
                 for j in range(hhl_phase_qubit_count):
                     qc.cp(2*pi*2**(j-hhl_phase_qubit_count)*a_i,gen_nodes[i],((list(hhl_phase_reg))[::-1])[j])
                 # qc.compose(general_CZ(1.0/c_coeff,n), qubits=(list(hhl_phase_reg))[::-1]+list(gen_nodes[t]), inplace=True)
             qc.compose(qft.inverse(), qubits=hhl_phase_reg, inplace=True)
-            qc.rz(-params[layer_index]*C_P, gen_nodes[t][i])
+            qc.rz(-params[layer_index]*C_P, hhl_phase_reg[0])
             qc.compose(qft, qubits=hhl_phase_reg, inplace=True)
             for i in range(gen_node_count):
-                a_i=real_powers[i]*2**(hhl_phase_qubit_count-1)/sum(real_powers[gen_node_count:])
+                a_i=real_powers[i][t]*2**(hhl_phase_qubit_count-1)/sum([-real_powers[node][t] for node in range(gen_node_count,len(real_powers))])
                 for j in range(hhl_phase_qubit_count):
                     qc.cp(-2*pi*2**(j-hhl_phase_qubit_count)*a_i,gen_nodes[i],((list(hhl_phase_reg))[::-1])[j])
             qc.compose(qft.inverse(), qubits=hhl_phase_reg, inplace=True)

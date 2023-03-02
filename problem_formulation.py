@@ -85,7 +85,7 @@ class Grid:
         self.time_step=t
 
     def set_active_nodes(self, node_active):
-        node_active = [bool(el) for el in node_active]
+        node_active = [bool(int(el)) for el in node_active]
         self.node_active=node_active
         if len(node_active)!=len(self.nodes):
             if len(node_active)!=len([node for node in self.nodes if node.real_power[self.time_step]>0]):
@@ -143,32 +143,74 @@ class UCProblem:
         self.grid_timesteps = Grid(lines, nodes, [True for _ in nodes])
         self.par_qaoa_circ = None
 
-    def compute_cost(self, bitstring):
-        if len(bitstring) != self.timestep_count * len(self.nodes):
+    def compute_cost(self, bitstring, consider_transmission_costs=True):
+        bitstring=bitstring[::-1]
+        if len(bitstring.split()) != self.timestep_count:
+            print(bitstring)
+            print(self.timestep_count, self.gen_nodes)
             raise
 
         cost=0
         A=self.grid_timesteps.A
-        for j in range(self.timestep_count-1):
-            for i in range(len(self.gen_nodes)):
-                cost+=bitstring[j*len(self.gen_nodes)+i]*self.gen_nodes[i].cost_prod
-                cost+=bitstring[j*len(self.gen_nodes)+i]*(1-bitstring[(j+1)*len(self.gen_nodes)+i])*self.gen_nodes[i].cost_off
-                cost+=bitstring[(j+1)*len(self.gen_nodes)+i]*(1-bitstring[j*len(self.gen_nodes)+i])*self.gen_nodes[i].cost_on
+        sol=bitstring.split()
 
-            self.grid_timesteps.set_timestep(j)
-            self.grid_timesteps.set_active_nodes(bitstring[j*len(self.gen_nodes):(j+1)*len(self.gen_nodes)])
-            b=self.grid_timesteps.b
-            A_inv=linalg.inv(A)
-            x=A_inv @ b
-            for p in range(len(x)):
-                for q in range(p):
-                    line=self.grid_timesteps.get_line_from_nodes(self.nodes[p], self.nodes[q])
-                    if line:
-                        cost+=line.cost_of_line*abs(line.susceptance*(x[p]-x[q]))
+        # print(sol)
+        print(sol)
+        for t in range(self.timestep_count):
+            if len(sol[t])!=len(self.gen_nodes):
+                raise
+            
+            gen_power=0
+            for i in range(len(self.gen_nodes)):
+                gen_power+=int(sol[t][i])*self.gen_nodes[i].real_power[0]
+                cost+=int(sol[t][i])*self.gen_nodes[i].cost_prod
+                if t<self.timestep_count-1:
+                    cost+=int(sol[t][i])*(1-int(sol[(t+1)][i]))*self.gen_nodes[i].cost_off
+                    cost+=int(sol[(t+1)][i])*(1-int(sol[t][i]))*self.gen_nodes[i].cost_on
+            
+            demand=0
+            for i in range(len(self.nodes)-len(self.gen_nodes)):
+                i+=len(self.gen_nodes)
+                demand-=self.nodes[i].real_power[t]
         
+            print("t=",t)
+            print("Power generated:", gen_power)
+            print("Demand:", demand)
+            
+            if gen_power<demand:
+
+                penalty_cost=sum([node.cost_prod for node in self.gen_nodes])+ \
+                    sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
+                if consider_transmission_costs:
+                    penalty_cost+=sum([line.cost_of_line*sum([node.real_power[0] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.grid_timesteps.lines])
+                print("Penalty")
+                print("Cost before penalty:",cost)
+                cost+=penalty_cost
+            
+            print()
+
+
+            self.grid_timesteps.set_timestep(t)
+            self.grid_timesteps.set_active_nodes(sol[t])
+
+            if consider_transmission_costs:
+
+                # b changes when timestep and active nodes change
+                b=self.grid_timesteps.b
+                A_inv=linalg.inv(A)
+                x=A_inv @ b
+                for p in range(len(x)):
+                    for q in range(p):
+                        line=self.grid_timesteps.get_line_from_nodes(self.nodes[p], self.nodes[q])
+                        if line:
+                            cost+=line.cost_of_line*abs(line.susceptance*(x[p]-x[q]))
+            
+        print("Final cost:",cost)
+        print()
+        print()
         return cost
     
-    def create_and_store_QAOA_ansatz(self, no_layers=3):
+    def create_and_store_QAOA_ansatz(self, no_layers=3, consider_transmission_costs=True):
 
         B=self.grid_timesteps.A
         C, max_eigval=self.grid_timesteps.A_eig_bounds
@@ -185,13 +227,16 @@ class UCProblem:
         self.par_qaoa_circ=create_QAOA_ansatz(self.timestep_count, len(self.gen_nodes),
         [node.real_power for node in self.nodes], 4, 4, [node.cost_prod for node in self.gen_nodes],
         [[node.cost_on for node in self.gen_nodes],[node.cost_off for node in self.gen_nodes]], line_costs,
-        B, max_eigval, C, no_layers)
+        B, max_eigval, C, no_layers, consider_transmission_costs=consider_transmission_costs)
+
+        print("Created circuit")
+
         self.backend=Aer.get_backend('aer_simulator')
         self.par_qaoa_circ=transpile(self.par_qaoa_circ, self.backend)
 
-    def get_QAOA_circuit_with_set_parameters(self, params):
+    def get_QAOA_circuit_with_set_parameters(self, params, consider_transmission_costs=True):
         if self.par_qaoa_circ==None:
-            self.create_and_store_QAOA_ansatz(int(len(params)/2))
+            self.create_and_store_QAOA_ansatz(int(len(params)/2), consider_transmission_costs)
         circ=self.par_qaoa_circ.bind_parameters(params)
         return circ
     
@@ -202,18 +247,32 @@ class UCProblem:
         print(counts)
         cost=0
         for key in counts.keys():
-            bitstring="".join(key.split())
-            cost+=self.compute_cost(bitstring)*counts[key]
+            cost+=self.compute_cost(key, True)*counts[key]
+        return cost
+    
+    def estimate_circ_cost_without_transmission_costs(self, params):
+        print(params)
+        circ=self.get_QAOA_circuit_with_set_parameters(params, False)
+        counts = self.backend.run(circ, nshots=512).result().get_counts()
+        print(counts)
+        cost=0
+        for key in counts.keys():
+            cost+=self.compute_cost(key, False)*counts[key]
         return cost
         
     
-    def find_optimum_solution(self, initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):
-        res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
+    def find_optimum_solution(self, consider_transmission_costs=True, initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):
+        if consider_transmission_costs:
+            res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
+        else:
+            res=minimize(self.estimate_circ_cost_without_transmission_costs, initial_guess, method='COBYLA', options={"disp":True})
         print(res)
+        print("Running circuit with ideal parameters:")
+        print("Cost is", self.estimate_circ_cost(res.x))
 
 
 if __name__=="__main__":
-    node1=Node([2,2], 2, 1, 1)
+    node1=Node([2,2], 5, 1, 1)
     node2=Node([1,1], 1, 2, 1)
     node3=Node([-1.5,-1])
     node4=Node([-1,0])
@@ -221,5 +280,5 @@ if __name__=="__main__":
     line2=Line(node2,node3,1,1)
     line3=Line(node4,node3,1,1)
     
-    problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3], 2)
-    problem_instance.find_optimum_solution()
+    problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3,node4], 2)
+    problem_instance.find_optimum_solution(consider_transmission_costs=False)
