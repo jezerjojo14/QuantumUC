@@ -257,7 +257,7 @@ def create_QAOA_ansatz(
     circuit_key="QAOA_"+"_"+str(timestep_count)+"_"+str(gen_node_count)+"_"+str(real_powers)+\
             "_"+str(hhl_phase_qubit_count)+"_"+str(qadc_qubit_count)+"_"+str(running_costs)+\
             "_"+str(on_off_costs)+"_"+str(line_costs)+"_"+str(B)+"_"+str(max_eigval)+\
-            "_"+str(C)+"_"+str(no_layers)
+            "_"+str(C)+"_"+str(no_layers)+"_"+str(consider_transmission_costs)
     
     try:
         circuit_ID=circuit_IDs[circuit_key]
