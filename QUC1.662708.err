@@ -1,0 +1,24 @@
+capi_return is NULL
+Call-back cb_calcfc_in__cobyla__user__routines failed.
+Traceback (most recent call last):
+  File "problem_formulation.py", line 225, in <module>
+    problem_instance.find_optimum_solution()
+  File "problem_formulation.py", line 211, in find_optimum_solution
+    res=minimize(self.estimate_circ_cost, initial_guess, method='Nelder-Mead', options={"disp":True})
+  File "/y/x/afarea/anaconda3_2021/lib/python3.8/site-packages/scipy/optimize/_minimize.py", line 629, in minimize
+    return _minimize_cobyla(fun, x0, args, constraints, **options)
+  File "/y/x/afarea/anaconda3_2021/lib/python3.8/site-packages/scipy/optimize/cobyla.py", line 34, in wrapper
+    return func(*args, **kwargs)
+  File "/y/x/afarea/anaconda3_2021/lib/python3.8/site-packages/scipy/optimize/cobyla.py", line 260, in _minimize_cobyla
+    xopt, info = _cobyla.minimize(calcfc, m=m, x=np.copy(x0), rhobeg=rhobeg,
+  File "/y/x/afarea/anaconda3_2021/lib/python3.8/site-packages/scipy/optimize/cobyla.py", line 252, in calcfc
+    f = fun(np.copy(x), *args)
+  File "problem_formulation.py", line 200, in estimate_circ_cost
+    circ=self.get_QAOA_circuit_with_set_parameters(params)
+  File "problem_formulation.py", line 194, in get_QAOA_circuit_with_set_parameters
+    self.create_and_store_QAOA_ansatz(int(len(params)/2))
+  File "problem_formulation.py", line 185, in create_and_store_QAOA_ansatz
+    self.par_qaoa_circ=create_QAOA_ansatz(self.timestep_count, len(self.gen_nodes),
+  File "/y/x/afarea/QUC032023/QuantumUC-main/QAOA_ansatz.py", line 315, in create_QAOA_ansatz
+    a_i=real_powers[i]*2**(hhl_phase_qubit_count-1)/sum(real_powers[gen_node_count:])
+TypeError: unsupported operand type(s) for +: 'int' and 'list'
