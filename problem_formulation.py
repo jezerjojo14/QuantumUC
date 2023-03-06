@@ -17,13 +17,26 @@ class Node:
     lines (list of Line objects): Lines connected to the node
     """
 
-    def __init__(self, real_power, cost_prod=0, cost_on=0, cost_off=0):
+    instance_names=[]
+
+    def __init__(self, real_power, cost_prod=0, cost_on=0, cost_off=0, label=None):
 
         self.lines=[]
         self.real_power = real_power
         self.cost_prod = cost_prod
         self.cost_on = cost_on
         self.cost_off = cost_off
+        if label:
+            if label not in Node.instance_names:
+                self.label=label
+                Node.instance_names+=[label]
+            else:
+                i=1
+                while label+"_"+str(i) in Node.instance_names:
+                    i+=1
+                self.label=label+"_"+str(i)
+                Node.instance_names+=[self.label]
+
 
     def add_line(self, line):
         if line not in self.lines:
@@ -60,8 +73,8 @@ class Grid:
         self.A=None
         self.time_step=0
         self.lines = lines
-        nodes.sort(reverse=True, key=lambda node:node.real_power[0])
-        nodes=[nodes[-1]]+nodes[:-1]
+        # nodes.sort(reverse=True, key=lambda node:node.real_power[0])
+        # nodes=[nodes[-1]]+nodes[:-1]
         self.nodes = nodes
         self.node_active = node_active
         if len(node_active)!=len(nodes):
@@ -272,13 +285,13 @@ class UCProblem:
 
 
 if __name__=="__main__":
-    node1=Node([2,2], 5, 1, 1)
-    node2=Node([1,1], 1, 2, 1)
-    node3=Node([-1.5,-1])
-    node4=Node([-1,0])
+    node1=Node([2,2], 5, 1, 1, "gen1")
+    node2=Node([1,1], 1, 2, 1, "gen2")
+    node3=Node([-1.5,-1], 0,0,0, "load1")
+    node4=Node([-1,0], 0,0,0, "load2")
     line1=Line(node1,node3,1,1)
     line2=Line(node2,node3,1,1)
-    line3=Line(node4,node3,1,1)
+    line3=Line(node4,node2,1,1)
     
     problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3,node4], 2)
-    problem_instance.find_optimum_solution(consider_transmission_costs=False)
+    problem_instance.find_optimum_solution(consider_transmission_costs=True)
