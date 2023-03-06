@@ -275,7 +275,7 @@ def create_QAOA_ansatz(
     current_dir=os.getcwd()
     circuits_dir=os.path.join(current_dir, "circuits")
 
-    circuit_key="QAOA_"+"_"+str(timestep_count)+"_"+str(gen_node_count)+"_"+str(real_powers)+\
+    QAOA_circuit_key="QAOA_"+"_"+str(timestep_count)+"_"+str(gen_node_count)+"_"+str(real_powers)+\
             "_"+str(hhl_phase_qubit_count)+"_"+str(qadc_qubit_count)+"_"+str(running_costs)+\
             "_"+str(on_off_costs)+"_"+str(line_costs)+"_"+str(B)+"_"+str(max_eigval)+\
             "_"+str(C)+"_"+str(no_layers)+"_"+str(consider_transmission_costs)
@@ -284,7 +284,7 @@ def create_QAOA_ansatz(
 
     try:
         print("Check if QAOA circuit exists")
-        circuit_ID=circuit_IDs[circuit_key]
+        circuit_ID=circuit_IDs[QAOA_circuit_key]
         print("Circuit exists. Circuit ID:", circuit_ID)
     except Exception as e:
         print(e)
@@ -463,7 +463,7 @@ def create_QAOA_ansatz(
 
     circuit_ID=str(len(os.listdir(circuits_dir)))
 
-    circuit_IDs[circuit_key]=circuit_ID
+    circuit_IDs[QAOA_circuit_key]=circuit_ID
     
     with open("circuit_ID.json", 'w', encoding='utf-8') as f:
         json.dump(circuit_IDs, f, ensure_ascii=False, indent=4)
@@ -471,8 +471,6 @@ def create_QAOA_ansatz(
     with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'wb') as fd:
         qpy_serialization.dump(qc_total, fd)
     
-    a=input("QAOA circ completed. Press any key to continue.")
-
     return qc_total
 
 
