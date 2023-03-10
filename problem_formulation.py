@@ -36,6 +36,12 @@ class Node:
                     i+=1
                 self.label=label+"_"+str(i)
                 Node.instance_names+=[self.label]
+        else:
+            i=1
+            while "node_"+str(i) in Node.instance_names:
+                i+=1
+            self.label="node_"+str(i)
+            Node.instance_names+=[self.label]
 
 
     def add_line(self, line):

@@ -179,7 +179,7 @@ def construct_exp_k_abs_cos_circuit(n, no_terms, k):
                 terms_dealt[i]=1
                 i+=1
                 continue
-            term=[cos_expression[i], [m for m in range(n) if (format(i, 'b').zfill(n))[m]==1]]
+            term=[cos_expression[i], [m for m in range(n) if (format(i, 'b').zfill(n))[m]=='1']]
             if len([el for c_term in current_terms for el in c_term[1]]+term[1])==len(list(set([el for c_term in current_terms for el in c_term[1]]+term[1]))):
                 cos_expression[i]=None
                 terms_dealt[i]=1
