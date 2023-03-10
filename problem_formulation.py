@@ -300,4 +300,4 @@ if __name__=="__main__":
     line3=Line(node4,node2,1,1)
     
     problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3,node4], 2)
-    problem_instance.find_optimum_solution(consider_transmission_costs=True)
+    problem_instance.find_optimum_solution(consider_transmission_costs=True, initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25]))

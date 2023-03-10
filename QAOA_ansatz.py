@@ -426,20 +426,20 @@ def create_QAOA_ansatz(
             C_P+=sum([sum(arr) for arr in line_costs])/2
 
         for t in range(timestep_count):
-            qc.compose(qft, qubits=hhl_phase_reg, inplace=True)
+            qc.h(hhl_phase_reg)
             for i in range(gen_node_count):
                 a_i=real_powers[i][t]*2**(hhl_phase_qubit_count-1)/sum([-real_powers[node][t] for node in range(gen_node_count,len(real_powers))])
                 for j in range(hhl_phase_qubit_count):
                     qc.cp(2*pi*2**(j-hhl_phase_qubit_count)*a_i,gen_nodes[i],((list(hhl_phase_reg))[::-1])[j])
                 # qc.compose(general_CZ(1.0/c_coeff,n), qubits=(list(hhl_phase_reg))[::-1]+list(gen_nodes[t]), inplace=True)
             qc.compose(qft.inverse(), qubits=hhl_phase_reg, inplace=True)
-            qc.rz(-params_temp[0]*C_P, hhl_phase_reg[0])
+            qc.rz(-params_temp[0]*C_P, hhl_phase_reg[-1])
             qc.compose(qft, qubits=hhl_phase_reg, inplace=True)
             for i in range(gen_node_count):
                 a_i=real_powers[i][t]*2**(hhl_phase_qubit_count-1)/sum([-real_powers[node][t] for node in range(gen_node_count,len(real_powers))])
                 for j in range(hhl_phase_qubit_count):
                     qc.cp(-2*pi*2**(j-hhl_phase_qubit_count)*a_i,gen_nodes[i],((list(hhl_phase_reg))[::-1])[j])
-            qc.compose(qft.inverse(), qubits=hhl_phase_reg, inplace=True)
+            qc.h(hhl_phase_reg)
 
             
 
