@@ -289,6 +289,23 @@ def create_QAOA_ansatz(
     except Exception as e:
         print(e)
     
+    params=ParameterVector('p', 2*no_layers)
+    
+    node_count=len(real_powers)
+
+    gen_nodes=[QuantumRegister(gen_node_count, "gen_nodes_at_t_"+str(i)) for i in range(timestep_count)]
+    tot_nodes=QuantumRegister(int(np.ceil(np.log2(node_count))), "tot_nodes")
+    state_prep_anc=QuantumRegister(1, "state_prep_anc")
+    hhl_phase_reg=QuantumRegister(hhl_phase_qubit_count, "hhl_phase_reg")
+    hhl_anc=QuantumRegister(1, "hhl_anc")
+    qadc_reg=QuantumRegister(qadc_qubit_count, "qadc_reg")
+    qadc_anc=QuantumRegister(1, "qadc_anc")
+
+    output_reg=[ClassicalRegister(gen_node_count) for i in range(timestep_count)]
+
+    qc_total=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg)
+
+    
     if circuit_ID:
         with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'rb') as fd:
             qc = qpy_serialization.load(fd)[0]
@@ -296,23 +313,7 @@ def create_QAOA_ansatz(
         circuit_ID=False
 
         print("Constructing QAOA Circuit")
-        
-        params=ParameterVector('p', 2*no_layers)
-
-        node_count=len(real_powers)
-
-        gen_nodes=[QuantumRegister(gen_node_count, "gen_nodes_at_t_"+str(i)) for i in range(timestep_count)]
-        tot_nodes=QuantumRegister(int(np.ceil(np.log2(node_count))), "tot_nodes")
-        state_prep_anc=QuantumRegister(1, "state_prep_anc")
-        hhl_phase_reg=QuantumRegister(hhl_phase_qubit_count, "hhl_phase_reg")
-        hhl_anc=QuantumRegister(1, "hhl_anc")
-        qadc_reg=QuantumRegister(qadc_qubit_count, "qadc_reg")
-        qadc_anc=QuantumRegister(1, "qadc_anc")
-
-        output_reg=[ClassicalRegister(gen_node_count) for i in range(timestep_count)]
-
         qc=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg)
-        qc_total=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg)
 
         print("Total number of qubits in our circuit:", qc.num_qubits)
 

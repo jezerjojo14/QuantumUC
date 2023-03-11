@@ -3,6 +3,7 @@ from scipy import linalg
 from scipy.optimize import minimize
 from QAOA_ansatz import create_QAOA_ansatz
 from qiskit import transpile, Aer
+from qiskit.algorithms.optimizers import SPSA
 
 class Node:
     """
@@ -161,6 +162,21 @@ class UCProblem:
         self.timestep_count = timestep_count
         self.grid_timesteps = Grid(lines, nodes, [True for _ in nodes])
         self.par_qaoa_circ = None
+    
+    def print_opt(self, number_of_sols=3):
+        costs={}
+        for i in range(2**(self.timestep_count*len(self.gen_nodes))):
+            s=bin(i)[2:].zfill(self.timestep_count*len(self.gen_nodes))
+            for j in range(self.timestep_count-1):
+                j+=1
+                s=s[:self.timestep_count*len(self.gen_nodes)-j*len(self.gen_nodes)]+" "+s[self.timestep_count*len(self.gen_nodes)-j*len(self.gen_nodes):]
+            costs[s[::-1]]=self.compute_cost(s)
+        
+        bitstrings=list(costs.keys())
+        bitstrings.sort(key=lambda bitstring:costs[bitstring])
+
+        for sol in bitstrings[:number_of_sols]:
+            print(sol, "Cost:", costs[sol])
 
     def compute_cost(self, bitstring, consider_transmission_costs=True):
         bitstring=bitstring[::-1]
@@ -174,7 +190,7 @@ class UCProblem:
         sol=bitstring.split()
 
         # print(sol)
-        print(sol)
+        # print(sol)
         for t in range(self.timestep_count):
             if len(sol[t])!=len(self.gen_nodes):
                 raise
@@ -192,9 +208,9 @@ class UCProblem:
                 i+=len(self.gen_nodes)
                 demand-=self.nodes[i].real_power[t]
         
-            print("t=",t)
-            print("Power generated:", gen_power)
-            print("Demand:", demand)
+            # print("t=",t)
+            # print("Power generated:", gen_power)
+            # print("Demand:", demand)
             
             if gen_power<demand:
 
@@ -202,11 +218,11 @@ class UCProblem:
                     sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
                 if consider_transmission_costs:
                     penalty_cost+=sum([line.cost_of_line*sum([node.real_power[0] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.grid_timesteps.lines])
-                print("Penalty")
-                print("Cost before penalty:",cost)
+                # print("Penalty")
+                # print("Cost before penalty:",cost)
                 cost+=penalty_cost
             
-            print()
+            # print()
 
 
             self.grid_timesteps.set_timestep(t)
@@ -224,9 +240,9 @@ class UCProblem:
                         if line:
                             cost+=line.cost_of_line*abs(line.susceptance*(x[p]-x[q]))
             
-        print("Final cost:",cost)
-        print()
-        print()
+        # print("Final cost:",cost)
+        # print()
+        # print()
         return cost
     
     def create_and_store_QAOA_ansatz(self, no_layers=3, consider_transmission_costs=True):
@@ -260,34 +276,52 @@ class UCProblem:
         return circ
     
     def estimate_circ_cost(self, params):
-        print(params)
+        # print(params)
         circ=self.get_QAOA_circuit_with_set_parameters(params)
-        counts = self.backend.run(circ, nshots=512).result().get_counts()
+        counts = self.backend.run(circ, shots=1024).result().get_counts()
         print(counts)
         cost=0
-        for key in counts.keys():
-            cost+=self.compute_cost(key, True)*counts[key]
+        for b in counts.keys():
+            cost+=self.compute_cost(b, True)*counts[b]
         return cost
     
     def estimate_circ_cost_without_transmission_costs(self, params):
         print(params)
         circ=self.get_QAOA_circuit_with_set_parameters(params, False)
-        counts = self.backend.run(circ, nshots=512).result().get_counts()
+        counts = self.backend.run(circ, shots=512).result().get_counts()
         print(counts)
         cost=0
         for key in counts.keys():
             cost+=self.compute_cost(key, False)*counts[key]
         return cost
-        
     
-    def find_optimum_solution(self, consider_transmission_costs=True, initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):
+    def print_opt_QAOA(self, params, number_of_sol=3):
+        circ=self.get_QAOA_circuit_with_set_parameters(params)
+        counts = self.backend.run(circ, shots=2048).result().get_counts()
+        bitstrings=list(counts.keys())
+        bitstrings.sort(key=lambda bitstring: counts[bitstring])
+
+        top_sols=bitstrings[-3:]
+
+        for sol in top_sols[::-1]:
+            print(sol[::-1], "Counts:", counts[sol])
+
+    
+    def find_optimum_solution(self, consider_transmission_costs=True, initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):       
+        opt = SPSA(maxiter=300)
         if consider_transmission_costs:
-            res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
+            res=opt.minimize(self.estimate_circ_cost, initial_guess)
+            # res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
         else:
-            res=minimize(self.estimate_circ_cost_without_transmission_costs, initial_guess, method='COBYLA', options={"disp":True})
+            res=opt.minimize(self.estimate_circ_cost_without_transmission_costs, initial_guess)
+            # res=minimize(self.estimate_circ_cost_without_transmission_costs, initial_guess, method='COBYLA', options={"disp":True})
         print(res)
         print("Running circuit with ideal parameters:")
         print("Cost is", self.estimate_circ_cost(res.x))
+        print("Top three optimal solutions from QAOA:")
+        self.print_opt_QAOA(res.x)
+        print("Top three optimal solutions actual:")
+        self.print_opt()
 
 
 if __name__=="__main__":
@@ -300,4 +334,5 @@ if __name__=="__main__":
     line3=Line(node4,node2,1,1)
     
     problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3,node4], 2)
-    problem_instance.find_optimum_solution(consider_transmission_costs=True, initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25]))
+    problem_instance.find_optimum_solution(consider_transmission_costs=True)
+    # problem_instance.find_optimum_solution(consider_transmission_costs=True, initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25]))
