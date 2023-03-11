@@ -4,6 +4,7 @@ from scipy.optimize import minimize
 from QAOA_ansatz import create_QAOA_ansatz
 from qiskit import transpile, Aer
 from qiskit.algorithms.optimizers import SPSA
+from matplotlib import pyplot as plt
 
 class Node:
     """
@@ -276,13 +277,27 @@ class UCProblem:
         return circ
     
     def estimate_circ_cost(self, params):
-        # print(params)
         circ=self.get_QAOA_circuit_with_set_parameters(params)
         counts = self.backend.run(circ, shots=1024).result().get_counts()
-        print(counts)
+        # print(counts)
+
         cost=0
+
+        # Sqrt to penalize large variance
         for b in counts.keys():
-            cost+=self.compute_cost(b, True)*counts[b]
+            cost+=self.compute_cost(b, True)*(counts[b]**0.5)
+        
+        max_counts=0
+        mode_cost=0
+
+        for b in counts.keys():
+            if max_counts<counts[b]:
+                max_counts=counts[b]
+                mode_cost=self.compute_cost(b, True)
+        
+        # Extra weight on mode of dist
+        cost+=mode_cost*512
+
         return cost
     
     def estimate_circ_cost_without_transmission_costs(self, params):
@@ -305,10 +320,22 @@ class UCProblem:
 
         for sol in top_sols[::-1]:
             print(sol[::-1], "Counts:", counts[sol])
+        
+        print(counts)
+        
+        x=[]
+        y=[]
+
+        for b in counts.keys():
+            x+=[self.compute_cost(b, True)]
+            y+=[counts[b]]
+        
+        plt.bar(x,y)
+        plt.show()
 
     
     def find_optimum_solution(self, consider_transmission_costs=True, initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):       
-        opt = SPSA(maxiter=300)
+        opt = SPSA(maxiter=2000)
         if consider_transmission_costs:
             res=opt.minimize(self.estimate_circ_cost, initial_guess)
             # res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
@@ -334,5 +361,5 @@ if __name__=="__main__":
     line3=Line(node4,node2,1,1)
     
     problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3,node4], 2)
-    problem_instance.find_optimum_solution(consider_transmission_costs=True)
-    # problem_instance.find_optimum_solution(consider_transmission_costs=True, initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25]))
+    # problem_instance.find_optimum_solution(consider_transmission_costs=True)
+    problem_instance.find_optimum_solution(consider_transmission_costs=True, initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25]))
