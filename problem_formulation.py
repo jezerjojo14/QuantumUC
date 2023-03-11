@@ -283,20 +283,21 @@ class UCProblem:
 
         cost=0
 
-        # Sqrt to penalize large variance
         for b in counts.keys():
-            cost+=self.compute_cost(b, True)*(counts[b]**0.5)
+            # # Sqrt to penalize large variance
+            # cost+=self.compute_cost(b, True)*(counts[b]**0.5)
+            cost+=self.compute_cost(b, True)*(counts[b])
         
-        max_counts=0
-        mode_cost=0
+        # max_counts=0
+        # mode_cost=0
 
-        for b in counts.keys():
-            if max_counts<counts[b]:
-                max_counts=counts[b]
-                mode_cost=self.compute_cost(b, True)
+        # for b in counts.keys():
+        #     if max_counts<counts[b]:
+        #         max_counts=counts[b]
+        #         mode_cost=self.compute_cost(b, True)
         
-        # Extra weight on mode of dist
-        cost+=mode_cost*512
+        # # Extra weight on mode of dist
+        # cost+=mode_cost*512
 
         return cost
     
@@ -335,7 +336,7 @@ class UCProblem:
 
     
     def find_optimum_solution(self, consider_transmission_costs=True, initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):       
-        opt = SPSA(maxiter=2000)
+        opt = SPSA(maxiter=300)
         if consider_transmission_costs:
             res=opt.minimize(self.estimate_circ_cost, initial_guess)
             # res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
@@ -361,5 +362,5 @@ if __name__=="__main__":
     line3=Line(node4,node2,1,1)
     
     problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3,node4], 2)
-    # problem_instance.find_optimum_solution(consider_transmission_costs=True)
-    problem_instance.find_optimum_solution(consider_transmission_costs=True, initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25]))
+    problem_instance.find_optimum_solution(consider_transmission_costs=True)
+    # problem_instance.find_optimum_solution(consider_transmission_costs=True, initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25]))
