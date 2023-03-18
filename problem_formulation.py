@@ -246,6 +246,13 @@ class UCProblem:
         # print()
         return cost
     
+    def print_A(self):
+        B=self.grid_timesteps.A
+        labels=[node.label for node in self.nodes]
+
+        print(labels)
+        print(B)
+    
     def create_and_store_QAOA_ansatz(self, no_layers=3, consider_transmission_costs=True):
 
         B=self.grid_timesteps.A
@@ -283,10 +290,14 @@ class UCProblem:
 
         cost=0
 
-        for b in counts.keys():
+        bitstrings=list(counts.keys())
+        bitstrings.sort(key=lambda b: counts[b], reverse=True)
+
+        for i in range(len(bitstrings)):
             # # Sqrt to penalize large variance
             # cost+=self.compute_cost(b, True)*(counts[b]**0.5)
-            cost+=self.compute_cost(b, True)*(counts[b])
+            bstring=bitstrings[i]
+            cost+=self.compute_cost(bstring, True)*(counts[bstring])*(i+1)**(-1)
         
         # max_counts=0
         # mode_cost=0
@@ -336,7 +347,7 @@ class UCProblem:
 
     
     def find_optimum_solution(self, consider_transmission_costs=True, initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):       
-        opt = SPSA(maxiter=300)
+        opt = SPSA(maxiter=1000)
         if consider_transmission_costs:
             res=opt.minimize(self.estimate_circ_cost, initial_guess)
             # res=minimize(self.estimate_circ_cost, initial_guess, method='COBYLA', options={"disp":True})
@@ -358,9 +369,11 @@ if __name__=="__main__":
     node3=Node([-1.5,-1], 0,0,0, "load1")
     node4=Node([-1,0], 0,0,0, "load2")
     line1=Line(node1,node3,1,1)
-    line2=Line(node2,node3,1,1)
+    line2=Line(node2,node1,1,1)
     line3=Line(node4,node2,1,1)
+    line4=Line(node4,node3,1,1)
     
-    problem_instance=UCProblem([line1,line2,line3], [node1,node2,node3,node4], 2)
+    problem_instance=UCProblem([line1,line2,line3, line4], [node1,node2,node3,node4], 2)
+    problem_instance.print_A()
     problem_instance.find_optimum_solution(consider_transmission_costs=True)
     # problem_instance.find_optimum_solution(consider_transmission_costs=True, initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25]))

@@ -10,11 +10,23 @@ def asin_x_inv(x):
     return asin(1/x)
 
 def power_expansion(n, expression, power):
+    """
+    Runs fortran code to take in polynomial expression of binary variables and returns
+    an expression for that polynomial to some power n, and reads the output through a terminal.
+
+    n (int): The number of variables
+    expression (array/list of floats): Coefficients of all possible terms such that the m-th element is
+                                  the coefficient of (x_1^m_1)(x_2^m_2)...(x_n^m_n) where the binary
+                                  expansion of m is m_n...m_2m_1.
+    power (int): Power to exponentiate the expression to.
+
+    Returns: An expression in the same format of the input raised to the given power
+    """
+
     print("\tPower expansion")
     child = wexpect.spawn('cmd.exe')
     child.expect('>')
     input_line='a.exe '+str(int(n))+' '+' '.join([str((float(el))) for el in expression])+" "+str(int(power))
-    # print(input_line)
     child.sendline(input_line)
     child.expect('>', timeout=99999999999999999999999999999)
     data=((child.before).split())[2+len(expression)+1:-1]
@@ -23,6 +35,17 @@ def power_expansion(n, expression, power):
     return np.array(output_expression)
 
 def get_cos_expression(n, no_terms):
+    """
+    Use Taylor expansion of cos(x) to get a polynomial expression of x expressed in terms
+    of its binary digits.
+
+    n (int): Number of bits of x.
+    no_terms (int): Number of terms of the Taylor expansion to be used.
+
+    Returns: Polynomial expression for cos(x) encoded as a list such that the m-th element
+             is the coefficient of (x_1^m_1)(x_2^m_2)...(x_n^m_n) where the binary
+             expansion of m is m_n...m_2m_1.
+    """
     
     print("Get cos(x) expression")
 
@@ -41,6 +64,18 @@ def get_cos_expression(n, no_terms):
     return cos_expression
 
 def get_asin_x_inv_expression(n, no_terms, x_scale=1):
+    """
+    Use Taylor expansion of asin(c/x) to get a polynomial expression of x expressed in terms
+    of its binary digits.
+
+    n (int): Number of bits of x.
+    no_terms (int): Number of terms of the Taylor expansion to be used.
+    x_scale (float|int): Constant c in expression asin(c/x)
+
+    Returns: Polynomial expression for cos(x) encoded as a list such that the m-th element
+             is the coefficient of (x_1^m_1)(x_2^m_2)...(x_n^m_n) where the binary
+             expansion of m is m_n...m_2m_1.
+    """
 
     print("Get asin(x^-1) expression")
 
@@ -65,44 +100,16 @@ def get_asin_x_inv_expression(n, no_terms, x_scale=1):
     print("asin_x_inv_expression", asin_x_inv_expression)
     return asin_x_inv_expression
 
-def construct_exp_k_cos_circuit(n, no_terms, k):
-
-    print("Constructing kcos(x) circuit")
-
-    qc=QuantumCircuit(n)
-
-    cos_expression=get_cos_expression(n, no_terms)
-
-    terms_dealt=[0 for _ in cos_expression]
-    while 0 in terms_dealt:
-        i=0
-        current_terms=[]
-        while i < len(cos_expression):
-            if cos_expression[i]==None:
-                i+=1
-                continue
-            if cos_expression[i]==0:
-                terms_dealt[i]=1
-                i+=1
-                continue
-            term=[cos_expression[i], [m for m in range(n) if (format(i, 'b').zfill(n))[m]==1]]
-            if len([el for c_term in current_terms for el in c_term[1]]+term[1])==len(list(set([el for c_term in current_terms for el in c_term[1]]+term[1]))):
-                cos_expression[i]=None
-                terms_dealt[i]=1
-                current_terms+=[term]
-                angle=term[0]
-                bits=term[1]
-                if len(bits)==1:
-                    qc.p(k*angle, bits[0])
-                elif len(bits)==2:
-                    qc.cp(k*angle, bits[0], bits[1])
-                elif len(bits)>2:
-                    qc.mcp(k*angle, [bit for bit in bits[1:]], bits[0])
-            i+=1
-
-    return qc
-
 def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
+    """
+    Create a QuantumCircuit that does RY rotations required for HHL.
+
+    n (int): Number of bits of x.
+    no_terms (int): Number of terms of the Taylor expansion to be used.
+    c (float|int): Constant c in expression asin(c/x)
+
+    Returns: QuantumCircuit
+    """
 
     print("Constructing asin(x^-1) circuit")
 
@@ -150,9 +157,18 @@ def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
     return qc
 
 def construct_exp_k_abs_cos_circuit(n, no_terms, k):
+    """
+    Create a QuantumCircuit that, given |x>, pulls out a phase exp(ik|cos(x)|)
+
+    n (int): Number of bits of x.
+    no_terms (int): Number of terms of the Taylor expansion to be used.
+    c (float|int): Constant c in expression asin(c/x)
+
+    Returns: QuantumCircuit
+    """
     qc=QuantumCircuit(n)
 
-    print("Constructing exp(k|cos(x)|)")
+    print("Constructing exp(ik|cos(x)|)")
 
 
     with open('cos_angles.json') as f:
@@ -203,27 +219,3 @@ def construct_exp_k_abs_cos_circuit(n, no_terms, k):
                 i+=1
 
     return qc
-
-if __name__ == '__main__':
-    n=int(input("Enter number of qubits: "))
-    no_terms=int(input("Enter number of terms for cos Taylor expansion: "))
-
-    asin_x_inv_expression=get_asin_x_inv_expression(n, no_terms, 8)
-
-    y=[]
-
-    for i in range(2**6):
-        output=0
-        for k in range(len(asin_x_inv_expression)):
-            term=[asin_x_inv_expression[k], [m for m in range(n) if (format(k, 'b').zfill(n))[m]==1]]
-            bits=term[1]
-            add_value=True
-            for j in bits:
-                if i%(2**(j+1))<2**j:
-                    add_value=False
-            if add_value:
-                output+=term[0]
-        y+=[output]
-
-    plt.plot(y)
-    plt.show()
