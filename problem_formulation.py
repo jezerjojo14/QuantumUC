@@ -297,7 +297,8 @@ class UCProblem:
             # # Sqrt to penalize large variance
             # cost+=self.compute_cost(b, True)*(counts[b]**0.5)
             bstring=bitstrings[i]
-            cost+=self.compute_cost(bstring, True)*(counts[bstring])*(i+1)**(-1)
+            cost+=self.compute_cost(bstring, True)*(counts[bstring])
+            # cost+=self.compute_cost(bstring, True)*(counts[bstring])*(i+1)**(-1)
         
         # max_counts=0
         # mode_cost=0
@@ -338,11 +339,14 @@ class UCProblem:
         x=[]
         y=[]
 
+        bs=[]
+
         for b in counts.keys():
+            bs+=[b]
             x+=[self.compute_cost(b, True)]
             y+=[counts[b]]
         
-        plt.bar(x,y)
+        plt.bar([b+"\n"+str(x_el) for b,x_el in zip(np.array(bs)[np.argsort(np.array(x))], np.sort(np.array(x)))],np.array(y)[np.argsort(np.array(x))])
         plt.show()
 
     
