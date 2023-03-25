@@ -1,6 +1,4 @@
 import numpy as np
-from scipy import linalg
-
 from math import pi
 from qiskit import QuantumCircuit, transpile, QuantumRegister, ClassicalRegister
 from qiskit.providers.aer import Aer
@@ -18,19 +16,6 @@ from qiskit.circuit import qpy_serialization
 import json
 import os
 
-import time
-
-import pickle
-
-def general_CZ(F, n):
-    x=QuantumRegister(n, 'x')
-    y=QuantumRegister(n, 'y')
-    qc_CZ=QuantumCircuit(x,y)
-    for k in range(n):
-        for i in range(n):
-            j=(i+k)%n
-            qc_CZ.cp(2*pi*2**(i+j-n)/F,x[i],y[j])
-    return qc_CZ
 
 # Function copied from qiskit textbook that implements a qft without the swaps
 def qft_rotations(circuit, n):
@@ -66,14 +51,20 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     """
 
-    hhl_circ=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
+    hhl_circ=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc, name="hhl_circ")
 
+    # If the circuit is already stored in a file, then just read the file
+ 
     with open("circuit_ID.json") as f:
+        # This json file contains descriptions of circuits as keys and their
+        # respective filenames as values
         circuit_IDs=json.load(f)
 
+    # Circuit qpy files are stored in ../circuits
     current_dir=os.getcwd()
     circuits_dir=os.path.join(current_dir, "circuits")
     
+    # Key describing the circuit used in json file to identify circuits
     circuit_key="HHL_"+str(real_powers)+"_"+str(B)+"_"+str(max_eigval)+"_"+str(C)+\
                 "_"+str(len(hhl_phase_reg))+"_"+str(num_time_slices)
 
@@ -88,6 +79,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
         print(e)
 
     if circuit_ID:
+        # Read the file to get the circuit and return it
         with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'rb') as fd:
             circuit = qpy_serialization.load(fd)[0]
             hhl_circ.compose(circuit, inplace=True)
@@ -98,15 +90,21 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # Rescaling and resizing
 
+    # Normalize the real_powers vector. This is the state we often call |b> when explaining HHL
     real_powers_norm=np.linalg.norm(np.array(real_powers))
     real_powers=np.array(real_powers)/real_powers_norm
 
+    # Number of extra dimensions we need to make our vector length a power of 2
     extra_dim=2**len(tot_nodes)-len(real_powers)
 
+    # Make real_powers look more like a statevector
     real_powers=np.concatenate((real_powers, np.array([0 for _ in range(extra_dim)])))
     B=np.array(B)
     print("Initial B:", B)
-    B=B*2*pi*(2**(len(hhl_phase_reg)-1))/(max_eigval*(2**len(hhl_phase_reg)))
+
+    # Scale B such that the eigenvalues are scaled in such a way that the largest bitstring (111...111)
+    # in the phase register represents the max of 1/C and max_eigval
+    B=B*2*pi*(2**(len(hhl_phase_reg)) - 1)/(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))
 
     B=np.concatenate((B, np.zeros((extra_dim, len(list(B))))))
     B=np.concatenate((B, np.zeros((len(list(B)), extra_dim))), axis=1)
@@ -169,7 +167,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # QPE
 
-    hhl_circ_temp=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
+    hhl_circ_temp=QuantumCircuit(gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc, name="hhl_circ_temp")
     hhl_circ_temp.h(hhl_phase_reg)
     hhl_circ_temp.x(state_prep_anc)
     repetitions = 1
@@ -178,10 +176,8 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
             hhl_circ_temp.append(CU, [hhl_phase_reg[len(hhl_phase_reg)-1-counting_qubit]]+[state_prep_anc[0]]+[q for q in tot_nodes])
         repetitions *= 2
 
-    # hhl_circ_temp.x(state_prep_anc)
-
     def qft_dagger(n):
-        """n-qubit QFTdagger the first n qubits in circ"""
+        """n-qubit QFTdagger the first n qubits of hhl_phase_reg"""
         # DO forget the Swaps!
         # for qubit in range(n//2):
         #     qc.swap(qubit, n-qubit-1)
@@ -196,7 +192,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # Conditioned rotations
 
-    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,C,max_eigval), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
+    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,C,(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)), [q for q in hhl_phase_reg[::-1]]+[hhl_anc[0]], inplace=True)
 
     # Uncompute QPE to unentangle the ancillas
 
@@ -303,7 +299,7 @@ def create_QAOA_ansatz(
 
     output_reg=[ClassicalRegister(gen_node_count) for i in range(timestep_count)]
 
-    qc_total=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg)
+    qc_total=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg, name="qc_main")
 
     
     if circuit_ID:
@@ -313,12 +309,12 @@ def create_QAOA_ansatz(
         circuit_ID=False
 
         print("Constructing QAOA Circuit")
-        qc=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg)
+        qc=QuantumCircuit(*gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,qadc_reg,qadc_anc,*output_reg, name="QAOA_layer")
 
         print("Total number of qubits in our circuit:", qc.num_qubits)
 
         # Use HHL Phase reg for penalty adder
-        qft=QuantumCircuit(hhl_phase_qubit_count)
+        qft=QuantumCircuit(hhl_phase_qubit_count, name="qft")
         qft_rotations(qft, hhl_phase_qubit_count)
 
         for gen_nodes_reg in gen_nodes:
@@ -330,8 +326,6 @@ def create_QAOA_ansatz(
         # Cost layer
 
         # Running costs
-        # print("layer_index", layer_index)
-        # print("params", params)
         for t in range(timestep_count):
             for i in range(gen_node_count):
                 qc.rz(params_temp[0]*running_costs[i], gen_nodes[t][i])
@@ -364,7 +358,7 @@ def create_QAOA_ansatz(
 
                             # Here we set the 0-th component of the statevector at the end of the hhl circuit to theta_i-theta_j
 
-                                # Move theta_i to 0th component of statevector, also update j accordingly to track the position of theta_j
+                            # Move theta_i to 0th component of statevector, also update j accordingly to track the position of theta_j
                             for k in range(len(tot_nodes)):
                                 if i%(2**(k+1))>=2**k:
                                     hhl_circ.x(tot_nodes[k])
@@ -372,16 +366,16 @@ def create_QAOA_ansatz(
                                         j-=2**k
                                     else:
                                         j+=2**k
-                                # Set k to be the position of the most significant 1 in binary expansion of j
+                            # Set k to be the position of the most significant 1 in binary expansion of j
                             k=len(tot_nodes)-1
                             while True:
                                 if j<2**k:
                                     k-=1
                                     continue
                                 break
-                                # Move theta_j to 2**k-th component
+                            # Move theta_j to 2**k-th component
                             for l in range(k):
-                                    # If l-th digit of binary expansion of j is 1
+                                # If l-th digit of binary expansion of j is 1
                                 if j%(2**(l+1))>=2**l:
                                     hhl_circ.cx(tot_nodes[k],tot_nodes[l])
                             hhl_circ.h(k)
@@ -433,7 +427,6 @@ def create_QAOA_ansatz(
                 a_i=real_powers[i][t]*2**(hhl_phase_qubit_count-1)/sum([-real_powers[node][t] for node in range(gen_node_count,len(real_powers))])
                 for j in range(hhl_phase_qubit_count):
                     qc.cp(2*pi*2**(j-hhl_phase_qubit_count)*a_i,gen_nodes[i],((list(hhl_phase_reg))[::-1])[j])
-                # qc.compose(general_CZ(1.0/c_coeff,n), qubits=(list(hhl_phase_reg))[::-1]+list(gen_nodes[t]), inplace=True)
             qc.compose(qft.inverse(), qubits=hhl_phase_reg, inplace=True)
             qc.rz(-params_temp[0]*C_P, hhl_phase_reg[-1])
             qc.compose(qft, qubits=hhl_phase_reg, inplace=True)

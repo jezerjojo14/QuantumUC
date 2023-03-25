@@ -19,6 +19,8 @@ def real_amp_est(n, k, prep_circ, prec):
 
     n (int): Number of qubits in prep_circ
     k (int): Index of amplitude that we want to estimate
+    prep_circ (QuantumCircuit): Circuit that prepares the state we want to
+                                conduct amplitude estimation on
     prec (int): Number of qubits we want to use to store arccos(Re(v_k))
     """
     data_reg=QuantumRegister(n)
@@ -27,7 +29,12 @@ def real_amp_est(n, k, prep_circ, prec):
 
     qc=QuantumCircuit(phase_reg, data_reg, hadamardtest_reg)
 
+    # psiprep_circ is the circuit that prapares the |Psi> state from |0>
     psiprep_circ=QuantumCircuit(data_reg, hadamardtest_reg)
+
+    # DataPrepGate is the gate of prep_circ which prepares the state we want to
+    # conduct amplitude estimation on
+
     DataPrepGate=prep_circ.to_gate()
     psiprep_circ.h(hadamardtest_reg)
     psiprep_circ.append(DataPrepGate.control(1), list(hadamardtest_reg)+list(data_reg))
@@ -43,6 +50,10 @@ def real_amp_est(n, k, prep_circ, prec):
     print(psiprep_circ)
 
     PsiPrepGate=psiprep_circ.to_gate()
+
+    # The operator G = R_k Z first applies a Z gate on the anc qubit. Then it performs an
+    # operation R_k which takes the |Psi> state to -|Psi> and any orthogonal state to itself
+
     G_circ=QuantumCircuit(data_reg, hadamardtest_reg)
 
     G_circ.z(hadamardtest_reg)
@@ -57,6 +68,8 @@ def real_amp_est(n, k, prep_circ, prec):
 
     GGate=G_circ.to_gate()
     CGGate=GGate.control(1)
+
+    # Apply phase estimation on G with the initial state |Psi>
 
     qc.h(phase_reg)
     qc.append(PsiPrepGate, list(data_reg)+list(hadamardtest_reg))
