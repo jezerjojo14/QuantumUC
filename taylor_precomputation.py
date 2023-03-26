@@ -1,13 +1,9 @@
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 import matplotlib.pyplot as plt
-from math import asin
 import wexpect
 
 import json
-
-def asin_x_inv(x):
-    return asin(1/x)
 
 def power_expansion(n, expression, power):
     """
@@ -24,6 +20,7 @@ def power_expansion(n, expression, power):
     """
 
     print("\tPower expansion")
+    print("\tPower: ", power)
 
     # Call fortran program via command line to do the computation
     child = wexpect.spawn('cmd.exe')
@@ -32,8 +29,9 @@ def power_expansion(n, expression, power):
     child.sendline(input_line)
     child.expect('>', timeout=99999999999999999999999999999)
     data=((child.before).split())[2+len(expression)+1:-1]
+    print("Data read:", data)
     output_expression=[float(el) for el in data]
-
+    print("Output expression", output_expression)
     return np.array(output_expression)
 
 def get_cos_expression(n, no_terms):
@@ -100,18 +98,18 @@ def get_asin_x_inv_expression(n, no_terms, x_scale=1):
 
     # Express the binary expansion of x in the same way we express the output 
     # polynomaial as lists of coefficients
-    x_expansion=np.array([0 for _ in range(2**n)])
+    x_expression=np.array([0.0 for _ in range(2**n)])
 
     # x = (m/2^n)\sum 2^i x_i  -  (floor(m/2) +1)
-    x_expansion[0]=-int(x_scale/2)-1
+    x_expression[0]=-int(x_scale/2)-1
     for i in range(n):
-        x_expansion[2**i]=2**i*(x_scale)/2**n
+        x_expression[2**i]=float(2**(i-n))*(x_scale)
 
     # List where i-th element is the coefficient of the x^(2i+1) in the Taylor expansion of asin 
     asin_expansion=[np.prod([(2*(j+1)-1)/(2*(j+1)) for j in range(i)])/(2*i+1) for i in range(no_terms)]
     
     # List where i-th element is the coefficient of the x^i in the Taylor expansion of 1/(x+(floor(m/2) +1))
-    # Note that if we plug in x_expansion here, this becomes the Taylor expansion of 1/x' where 
+    # Note that if we plug in x_expression here, this becomes the Taylor expansion of 1/x' where 
     # x'=x+(floor(m/2) +1) = (m/2^n)\sum 2^i x_i
     x_inv_expansion=[(-1)**i * (int(x_scale/2)+1)**(-i-1) for i in range(no_terms)]
 
@@ -121,12 +119,11 @@ def get_asin_x_inv_expression(n, no_terms, x_scale=1):
     # Get a polynomial expression for 1/mx where x=(1/2^n)\sum 2^i x_i
     for i in range(len(x_inv_expansion)):
         if x_inv_expansion[i]!=0:
-            x_inv_expression+=x_inv_expansion[i]*(power_expansion(n, x_expansion, i))
+            x_inv_expression+=x_inv_expansion[i]*(power_expansion(n, x_expression, i))
     # Plug this expression into the expansion of asin to get the polynomial expression for asin(1/mx)
     for i in range(len(asin_expansion)):
         if asin_expansion[i]!=0:
             asin_x_inv_expression+=asin_expansion[i]*(power_expansion(n, x_inv_expression, 2*i+1))
-    print("asin_x_inv_expression", asin_x_inv_expression)
     return asin_x_inv_expression
 
 def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
