@@ -173,6 +173,8 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
     repetitions = 1
     for counting_qubit in range(len(hhl_phase_reg)):
         for i in range(repetitions):
+            # Applying rotation to phase register qubits in reverse order
+            # This order will be switched back after applying inverse qft
             hhl_circ_temp.append(CU, [hhl_phase_reg[len(hhl_phase_reg)-1-counting_qubit]]+[state_prep_anc[0]]+[q for q in tot_nodes])
         repetitions *= 2
 
@@ -192,7 +194,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # Conditioned rotations
 
-    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,C,(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)), [q for q in hhl_phase_reg[::-1]]+[hhl_anc[0]], inplace=True)
+    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,C,(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
 
     # Uncompute QPE to unentangle the ancillas
 
@@ -208,14 +210,13 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     print("Length of untranspiled HHL", len(hhl_circ))
 
-
     print("Transpiling HHL circuit for storage")
     simulator = Aer.get_backend('aer_simulator')
-    hhl_circ=transpile(hhl_circ, simulator, optimization_level=3)
+    hhl_circ_transpiled=transpile(hhl_circ, simulator)
     
     with open(os.path.join(circuits_dir,circuit_ID+'.qpy'), 'wb') as fd:
-        print("Length of transpiled HHL", len(hhl_circ))
-        qpy_serialization.dump(hhl_circ, fd)
+        print("Length of transpiled HHL", len(hhl_circ_transpiled))
+        qpy_serialization.dump(hhl_circ_transpiled, fd)
 
     return(hhl_circ)
 

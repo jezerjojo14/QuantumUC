@@ -371,7 +371,7 @@ if __name__=="__main__":
     node1=Node([2,2], 5, 1, 1, "gen1")
     node2=Node([1,1], 1, 2, 1, "gen2")
     node3=Node([-1.5,-1], 0,0,0, "load1")
-    node4=Node([-1,0], 0,0,0, "load2")
+    node4=Node([-1,-0.75], 0,0,0, "load2")
     line1=Line(node1,node3,1,1)
     line2=Line(node2,node1,1,1)
     line3=Line(node4,node2,1,1)

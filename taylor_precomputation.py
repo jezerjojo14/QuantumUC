@@ -207,6 +207,8 @@ def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
                 bits=term[1]
                 if len(bits)>=1:
                     qc.mcry(c*angle, qc.qbit_argument_conversion(bits), ancilla[0])
+                else:
+                    qc.ry(c*angle, ancilla[0])
             i+=1
 
     return qc
