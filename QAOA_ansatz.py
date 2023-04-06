@@ -156,12 +156,14 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
         H+=(a*term)
 
     # Create evolution circuit
-
+    print(H.to_matrix())
     evolution_op = (H).exp_i()
+    print(evolution_op.to_matrix())
 
     trotterized_op = PauliTrotterEvolution(
                     trotter_mode='trotter',
                     reps=num_time_slices).convert(evolution_op)
+    print(trotterized_op.to_matrix())
     U=trotterized_op.to_circuit().to_gate()
     CU=U.control(2)
 
@@ -194,7 +196,8 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # Conditioned rotations
 
-    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,C,(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
+    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,2,(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
+    hhl_circ.x(hhl_anc[0])
 
     # Uncompute QPE to unentangle the ancillas
 
