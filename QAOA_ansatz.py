@@ -1,5 +1,6 @@
 import numpy as np
 from math import pi
+from scipy import linalg
 from qiskit import QuantumCircuit, transpile, QuantumRegister, ClassicalRegister
 from qiskit.providers.aer import Aer
 from qiskit.circuit import ParameterVector
@@ -142,6 +143,9 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
     for i in range(len(tot_nodes)-1):
         H=H^I
     
+    print("B:\n",B)
+    print()
+
     H=0*H
 
     paulis=[I,X,Y,Z]
@@ -152,18 +156,30 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
         for j in range(len(tot_nodes)-1):
             term=term^paulis[i%4]
             i=i//4
-        a=sum([((term.to_matrix())@(-B))[k][k] for k in range(2**len(tot_nodes))])/(2**len(tot_nodes))
+        a=sum([((term.to_matrix())@(B))[k][k] for k in range(2**len(tot_nodes))])/(2**len(tot_nodes))
         H+=(a*term)
 
     # Create evolution circuit
-    print(H.to_matrix())
-    evolution_op = (H).exp_i()
-    print(evolution_op.to_matrix())
+
+
+    # exp_i(A) := exp(-iA)
+    evolution_op = (-H).exp_i()
 
     trotterized_op = PauliTrotterEvolution(
                     trotter_mode='trotter',
                     reps=num_time_slices).convert(evolution_op)
-    print(trotterized_op.to_matrix())
+    
+    trot_exp_H=trotterized_op.to_matrix()
+
+    J, P = linalg.eig(trot_exp_H)
+    J=[np.log((el**(-1j)).real) for el in J]
+    J=[el+2*np.pi*int(el<0) for el in J]
+    
+    L=np.array([[int(i==j)*J[i] for j in range(len(J))] for i in range(len(J))])
+    H_rev_eng = P @ L @ linalg.inv(P)
+    print("The hamiltonian actually being simulated\nby the approximated evolution operator:\n", H_rev_eng)
+    print()
+
     U=trotterized_op.to_circuit().to_gate()
     CU=U.control(2)
 
