@@ -204,7 +204,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
         for j in range(n):
             for m in range(j):
                 hhl_circ_temp.cp(-pi/float(2**(j-m)), hhl_phase_reg[m], hhl_phase_reg[j])
-            hhl_circ_temp.h(j)
+            hhl_circ_temp.h(hhl_phase_reg[j])
 
     qft_dagger(len(hhl_phase_reg))
 

@@ -2,6 +2,7 @@ from QAOA_ansatz import create_QAOA_ansatz, create_hhl_circ
 from amp_est import real_amp_est
 from taylor_precomputation import construct_asin_x_inv_circuit, construct_exp_k_abs_cos_circuit, get_asin_x_inv_expression, get_cos_expression
 from math import asin
+import cmath
 from problem_formulation import Node, Line, Grid, UCProblem
 
 import numpy as np
@@ -11,6 +12,8 @@ from qiskit import QuantumCircuit, transpile, QuantumRegister, ClassicalRegister
 from qiskit.providers.aer import Aer
 from qiskit.circuit import ParameterVector
 from qiskit.circuit.library.data_preparation.state_preparation import StatePreparation
+
+from qiskit.quantum_info import Statevector
 
 from qiskit.opflow import PauliTrotterEvolution
 from qiskit.opflow import I, X, Y, Z
@@ -112,6 +115,58 @@ def asin_circ_test():
     statevector = result.get_statevector(qc)
     return statevector
 
+def get_subsyt_statevectors(sv, target_qubits):
+    # sv=list(np.around(np.asarray(sv),3))
+    sv=np.asarray(sv)
+    n=int(np.log2(len(sv)))
+    remaining_qubits=[i for i in range(n) if i not in target_qubits]
+    sv_list=[]
+    for i in range(2**len(remaining_qubits)):
+        sv_el=[]
+        active_remaining_qubits=[int(c) for c in str(bin(i))[2:][::-1]]
+        index_=sum([on*2**q_num for on,q_num in zip(active_remaining_qubits,remaining_qubits)])
+        for j in range(2**len(target_qubits)):
+            active_target_qubits=[int(c) for c in str(bin(j))[2:][::-1]]
+            index=index_+sum([on*2**q_num for on,q_num in zip(active_target_qubits,target_qubits)])
+            sv_el+=[sv[index]]
+        sv_el_norm=(sum([np.abs(el)**2 for el in sv_el]))**0.5
+        sv_el=np.array(sv_el)
+        first_el_phase=cmath.phase(sv_el[0])
+        sv_el=sv_el*cmath.exp(-first_el_phase*1j)
+        if sv_el_norm:
+            sv_el=sv_el/sv_el_norm
+        sv_list+=[[[i],sv_el,sv_el_norm**2]]
+
+    return sv_list
+
+def disp_subsyst_statevector(sv,target_qubits):
+    sv_list=get_subsyt_statevectors(sv, target_qubits)
+    n=int(np.log2(len(sv)))
+    no_change=True
+    while no_change:
+        no_el=len(sv_list)
+        for i in range(no_el):
+            i=no_el-1-i
+            sv=sv_list[i]
+            if sv[2]<0.03:
+                sv_list.pop(i)
+                no_change=False
+                continue
+            for j in range(i):
+                if np.allclose(sv_list[j][1],sv[1]):
+                    sv_list[j][0]+=sv[0]
+                    sv_list[j][0]=list(set(sv_list[j][0]))
+                    sv_list[j][2]+=sv[2]
+                    sv_list.pop(i)
+                    no_change=False
+                    break
+    sv_list.sort(key=lambda sv:sv[2])
+    for sv in sv_list:
+        print("When remaining qubits are in states", ",".join(["|"+(str(bin(ind))[2:]).zfill(n-len(target_qubits))+">" for ind in sv[0]]), " (probability=",sv[2],"),")
+        print("the statevector of qubits", ",".join([str(q) for q in target_qubits]), "is")
+        print(np.around(sv[1],3))
+            
+    
 
 def hhl_test_deep():
     # Create problem
@@ -149,11 +204,14 @@ def hhl_test_deep():
     # Run code from create_hhl_circ
 
 
-
-
-
-
-
+    
+    st0 = Statevector.from_instruction(hhl_circ)
+    print("ST0")
+    disp_subsyst_statevector(st0,[0,1])
+    print()
+    print()
+    print()
+    print()
 
     print("Constructing HHL Circuit")
 
@@ -203,6 +261,14 @@ def hhl_test_deep():
                 hhl_circ.x(tot_nodes[j])
 
     hhl_circ.x(gen_nodes)
+
+    st1 = Statevector.from_instruction(hhl_circ)
+    print("ST1:")
+    disp_subsyst_statevector(st1,[2,3,4])
+    print()
+    print()
+    print()
+    print()
 
     # Paulinomial decomposition
 
@@ -262,6 +328,15 @@ def hhl_test_deep():
             # This order will be switched back after applying inverse qft
             hhl_circ_temp.append(CU, [hhl_phase_reg[len(hhl_phase_reg)-1-counting_qubit]]+[state_prep_anc[0]]+[q for q in tot_nodes])
         repetitions *= 2
+    
+    st2 = Statevector.from_instruction(hhl_circ)
+    print("ST2:")
+    disp_subsyst_statevector(st2,[2,3,4])
+    print()
+    print()
+    print()
+    print()
+
 
     def qft_dagger(n):
         """n-qubit QFTdagger the first n qubits of hhl_phase_reg"""
@@ -271,42 +346,56 @@ def hhl_test_deep():
         for j in range(n):
             for m in range(j):
                 hhl_circ_temp.cp(-pi/float(2**(j-m)), hhl_phase_reg[m], hhl_phase_reg[j])
-            hhl_circ_temp.h(j)
+            hhl_circ_temp.h(hhl_phase_reg[j])
 
     qft_dagger(len(hhl_phase_reg))
 
+    print(hhl_circ_temp.draw())
+
     hhl_circ.compose(hhl_circ_temp, inplace=True)
+
+    
+    st3 = Statevector.from_instruction(hhl_circ)
+    print("ST3:")
+    disp_subsyst_statevector(st3,[2,3,4])
+    print()
+    print()
+    print()
+    print()
 
     # Conditioned rotations
 
     hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,2,(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
     hhl_circ.x(hhl_anc[0])
 
+    # disp_subsyst_statevector(st4,[2,3])
+
     # Uncompute QPE to unentangle the ancillas
 
     hhl_circ.compose(hhl_circ_temp.inverse(), inplace=True)
 
-
-
-
-
-
-
+    st4 = Statevector.from_instruction(hhl_circ)
+    print("ST4:")
+    disp_subsyst_statevector(st4,[2,3])
+    print()
+    print()
+    print()
+    print()
 
 
 
     
     # Run HHL circuit and get statevector
     
-    backend=Aer.get_backend('aer_simulator')
-    hhl_circ.save_statevector()
-    hhl_circ=transpile(hhl_circ, backend)
-    result = backend.run(hhl_circ).result()
-    statevector = result.get_statevector(hhl_circ)
+    # backend=Aer.get_backend('aer_simulator')
+    # hhl_circ.save_statevector()
+    # hhl_circ=transpile(hhl_circ, backend)
+    # result = backend.run(hhl_circ).result()
+    # statevector = result.get_statevector(hhl_circ)
 
-    # Print relevant part of statevector
+    # # Print relevant part of statevector
 
-    print(list(np.around(np.asarray(statevector),3))[:32])
+    # print(list(np.around(np.asarray(statevector),3))[:32])
 
 
 
