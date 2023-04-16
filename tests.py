@@ -52,13 +52,13 @@ def plot_asin_x_inv(n, no_terms, x_scale):
     plt.plot([i/2**n for i in range(2**n)],y, label="Taylor approx")
     expected_plot=np.array([asin_x_inv(x_scale*i/2**n) for i in range(2**n)])
     plt.plot([i/2**n for i in range(2**n)], expected_plot, label="Actual")
-    # plt.show()
-    bounds=(0,expected_plot[np.isfinite(expected_plot)].max()*1.3)
-    print(bounds)
-    plt.ylim(bounds)
-    plt.savefig(os.path.join(final_dir, "plot_arcsin_x_inv__m_"+str(m)+".png"))
-    plt.clf()
-    plt.close('all')
+    plt.show()
+    # bounds=(0,expected_plot[np.isfinite(expected_plot)].max()*1.3)
+    # print(bounds)
+    # plt.ylim(bounds)
+    # plt.savefig(os.path.join(final_dir, "plot_arcsin_x_inv__m_"+str(m)+".png"))
+    # plt.clf()
+    # plt.close('all')
 
 def hhl_test():
     # Create problem
@@ -213,13 +213,18 @@ def hhl_test_deep():
     real_powers=real_powers[:,0]
     B=grid.A
     max_eigval=grid.A_eig_bounds[1]
-    C=grid.A_eig_bounds[0]
+    min_eigval=grid.A_eig_bounds[0]
     num_time_slices=5
 
     # Run code from create_hhl_circ
 
-
+    print("Min_eigval:",min_eigval)
+    print("Max_eigval:",max_eigval)
     
+    J, P = linalg.eig(B)
+
+    print("Actual eigvals:",J)
+
     st0 = Statevector.from_instruction(hhl_circ)
     print("ST0")
     disp_subsyst_statevector(st0,[0,1])
@@ -245,7 +250,8 @@ def hhl_test_deep():
 
     # Scale B such that the eigenvalues are scaled in such a way that the largest bitstring (111...111)
     # in the phase register represents the max of 1/C and max_eigval
-    B=B*2*pi*(2**(len(hhl_phase_reg)) - 1)/(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))
+    
+    B=B*2*pi/max_eigval
 
     B=np.concatenate((B, np.zeros((extra_dim, len(list(B))))))
     B=np.concatenate((B, np.zeros((len(list(B)), extra_dim))), axis=1)
@@ -381,17 +387,15 @@ def hhl_test_deep():
 
     # Conditioned rotations
 
-    m=(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)
-    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,1,m), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
+    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,1,max_eigval/min_eigval), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
     hhl_circ.x(hhl_anc[0])
-    print("Allowed eigenvalues between ",1/m, "and", m)
     # disp_subsyst_statevector(st4,[2,3])
 
     # Uncompute QPE to unentangle the ancillas
 
     hhl_circ.compose(hhl_circ_temp.inverse(), inplace=True)
 
-    print(hhl_circ.draw())
+    # print(hhl_circ.draw())
 
     st4 = Statevector.from_instruction(hhl_circ)
     print("ST4:")
@@ -406,39 +410,39 @@ def hhl_test_deep():
     
     # Run HHL circuit and get statevector
     
-    # backend=Aer.get_backend('aer_simulator')
-    # hhl_circ.save_statevector()
-    # hhl_circ=transpile(hhl_circ, backend)
-    # result = backend.run(hhl_circ).result()
-    # statevector = result.get_statevector(hhl_circ)
+    backend=Aer.get_backend('aer_simulator')
+    hhl_circ.save_statevector()
+    hhl_circ=transpile(hhl_circ, backend)
+    result = backend.run(hhl_circ).result()
+    statevector = result.get_statevector(hhl_circ)
 
-    # # Print relevant part of statevector
+    # Print relevant part of statevector
 
-    # print(list(np.around(np.asarray(statevector),3))[:32])
+    print(list(np.around(np.asarray(statevector),3))[:32])
 
 
 
 # Run tests
 
 # Success
-for m in range(70):
-    m+=2
-    plot_asin_x_inv(5,4,m)
+# for m in range(70):
+#     m+=2
+#     plot_asin_x_inv(5,4,m)
 
-    statevector=asin_circ_test(m)
+#     statevector=asin_circ_test(m)
 
-    plt.plot([i/32 for i in range(32)], [abs(el) for el in list(statevector)[32:]])
-    expected_plot=np.array([1/(m*(x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
-    plt.plot([i/32 for i in range(32)], expected_plot)
-    # plt.plot([i/32 for i in range(32)], [1/((x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
-    # plt.show()
-    bounds=(0,expected_plot[np.isfinite(expected_plot)].max()*1.3)
-    print(bounds)
-    plt.ylim(bounds)
-    # plt.ylim((-1,max(expected_plot)))
-    plt.savefig(os.path.join(final_dir, "plot_x_inv__m_"+str(m)+".png"))
-    plt.clf()
-    plt.close('all')
+#     plt.plot([i/32 for i in range(32)], [abs(el) for el in list(statevector)[32:]])
+#     expected_plot=np.array([1/(m*(x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
+#     plt.plot([i/32 for i in range(32)], expected_plot)
+#     # plt.plot([i/32 for i in range(32)], [1/((x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
+#     # plt.show()
+#     bounds=(0,expected_plot[np.isfinite(expected_plot)].max()*1.3)
+#     print(bounds)
+#     plt.ylim(bounds)
+#     # plt.ylim((-1,max(expected_plot)))
+#     plt.savefig(os.path.join(final_dir, "plot_x_inv__m_"+str(m)+".png"))
+#     plt.clf()
+#     plt.close('all')
 
 
 # asin_circ_test()
@@ -477,4 +481,4 @@ for m in range(70):
 
 # [[-0.16570573-0.26528365j, -0.02045629+0.37106175j,  0.7047277 -0.35960324j, 0.02169489+0.3709914j, ] [ 0.06356696+0.36614823j, -0.04409058+0.24854458j,  0.3865175 +0.14947224j, 0.53688608-0.58154272j,] [ 0.7047277 -0.35960324j,  0.34296922+0.23261523j, -0.1444304 +0.09853308j,   0.36710477+0.19228058j,] [ 0.02169489+0.3709914j,   0.65397874-0.44581432j,  0.36710477+0.19228058j,  -0.04409058+0.24854458j,]]
 
-# hhl_test_deep()
+hhl_test_deep()
