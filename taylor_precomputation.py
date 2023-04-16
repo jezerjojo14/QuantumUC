@@ -34,6 +34,36 @@ def power_expansion(n, expression, power):
     print("Output expression", output_expression)
     return np.array(output_expression)
 
+def create_tuple_table(n):
+    output_table=[[] for _ in range(2**n)]
+    for i in range(2**n):
+        i_bin=str(bin(i))[2:].zfill(n)
+        for el1 in range(2**n):
+            for el2 in range(el1,2**n):
+                el1_bin=str(bin(el1))[2:].zfill(n)
+                el2_bin=str(bin(el2))[2:].zfill(n)
+                combined="".join(str(int(int(c1) or int(c2))) for c1,c2 in zip(el1_bin,el2_bin))
+                if combined==i_bin:
+                    output_table[i]+=[(el1,el2)]
+    return output_table
+
+def multiply_expressions(n,expr1,expr2,tuple_table):
+    output_exp=[0 for _ in range(2**n)]
+    for i in range(2**n):
+        for t in tuple_table[i]:
+            output_exp[i]+=expr1[t[0]]*expr2[t[1]]
+            if t[0]!=t[1]:
+                output_exp[i]+=expr1[t[1]]*expr2[t[0]]
+    output_exp=np.array(output_exp)
+    return output_exp
+
+def create_power_table(n, expression, highest_power):
+    power_table=[expression]
+    for _ in range(int(np.log2(highest_power))):
+        power_table+=[power_expansion(n, power_table[-1], 2)]
+    return power_table
+
+
 def get_cos_expression(n, no_terms):
     """
     Use Taylor expansion of cos(2pi*x) to get a polynomial expression of x expressed in terms
@@ -111,19 +141,40 @@ def get_asin_x_inv_expression(n, no_terms, x_scale=1):
     # List where i-th element is the coefficient of the x^i in the Taylor expansion of 1/(x+(floor(m/2) +1))
     # Note that if we plug in x_expression here, this becomes the Taylor expansion of 1/x' where 
     # x'=x+(floor(m/2) +1) = (m/2^n)\sum 2^i x_i
-    x_inv_expansion=[(-1)**i * (int(x_scale/2)+1)**(-i-1) for i in range(no_terms)]
+    x_inv_expansion=[(-1)**i * (int(x_scale/2)+1)**(-i-1) for i in range(10*no_terms)]
 
     asin_x_inv_expression=np.array([0.0 for _ in range(2**n)])
     x_inv_expression=np.array([0.0 for _ in range(2**n)])
 
+    tuple_table=create_tuple_table(n)
+    power_table1=create_power_table(n, x_expression, len(x_inv_expansion))
+
     # Get a polynomial expression for 1/mx where x=(1/2^n)\sum 2^i x_i
     for i in range(len(x_inv_expansion)):
         if x_inv_expansion[i]!=0:
-            x_inv_expression+=x_inv_expansion[i]*(power_expansion(n, x_expression, i))
+            i_bin=str(bin(i))[2:].zfill(int(np.log2(len(x_inv_expansion))))
+            i_rev=i_bin[::-1]
+            power_expression=np.array([int(ind==0) for ind in range(2**n)])
+            for j in range(len(i_rev)):
+                if i_rev[j]=='0':
+                    continue
+                power_expression=multiply_expressions(n,power_expression,power_table1[j],tuple_table)
+            x_inv_expression+=x_inv_expansion[i]*power_expression
+
     # Plug this expression into the expansion of asin to get the polynomial expression for asin(1/mx)
+
+    power_table2=create_power_table(n, x_inv_expression, 2*len(asin_expansion)+1)
+
     for i in range(len(asin_expansion)):
         if asin_expansion[i]!=0:
-            asin_x_inv_expression+=asin_expansion[i]*(power_expansion(n, x_inv_expression, 2*i+1))
+            two_i_1_bin=str(bin(2*i+1))[2:].zfill(int(np.log2(2*len(asin_expansion)+1)))
+            i_rev=two_i_1_bin[::-1]
+            power_expression=[int(ind==0) for ind in range(2**n)]
+            for j in range(len(i_rev)):
+                if i_rev[j]=='0':
+                    continue
+                power_expression=multiply_expressions(n,power_expression,power_table2[j],tuple_table)
+            asin_x_inv_expression+=asin_expansion[i]*power_expression
     return asin_x_inv_expression
 
 def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
@@ -171,7 +222,8 @@ def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
     # While there are terms that haven't been worked into the circuit, keep running this loop.
     # Each iteration deals with one layer of depth and picks the terms from the expression that maximizes
     # the number of qubits used while making sure none of the terms overlap.
-    # This is a greedy algorithm to minimize the depth.
+    # This is a greedy algorithm to minimize the depth (probablyonly works optimally when
+    # asin_x_inv_expression is sorted in descending order of associated control qubits, can figure out later).
     while 0 in terms_dealt:
         # i is the index of the term that is being looked at. We initialize it to 0
         i=0
@@ -206,9 +258,9 @@ def construct_asin_x_inv_circuit(n, no_terms, c, lambda_max):
                 angle=term[0]
                 bits=term[1]
                 if len(bits)>=1:
-                    qc.mcry(c*angle, qc.qbit_argument_conversion(bits), ancilla[0])
+                    qc.mcry(c*2*angle, qc.qbit_argument_conversion(bits), ancilla[0])
                 else:
-                    qc.ry(c*angle, ancilla[0])
+                    qc.ry(c*2*angle, ancilla[0])
             i+=1
 
     return qc

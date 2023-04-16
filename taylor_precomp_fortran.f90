@@ -18,8 +18,8 @@ recursive subroutine add_to_output(power, s, partition_index, expression, output
     integer, intent(in) :: partition_index
     integer, dimension(1:2**n), intent(in) :: partition
     integer, dimension(1:2**n) :: partition_new
-    real, dimension(1:2**n), intent(in) ::  expression
-    real, dimension(1:2**n), intent(out) ::  output_expression
+    real*8, dimension(1:2**n), intent(in) ::  expression
+    real*8, dimension(1:2**n), intent(out) ::  output_expression
     integer, dimension(1:n), intent(in) :: qubits
     integer, dimension(1:n) :: qubits_new
     integer :: i
@@ -64,13 +64,13 @@ subroutine power_expansion(n, expression, output_expression, power)
     implicit none
     integer, intent(in) :: power
     integer, intent(in) :: n
-    real, intent(in) :: expression(2**n)
-    real, intent(out) :: output_expression(2**n)
+    real*8, intent(in) :: expression(2**n)
+    real*8, intent(out) :: output_expression(2**n)
     integer :: qubits(n)
 
     integer :: partition(2**n)
 
-    output_expression=0.0
+    output_expression=0.0d0
     qubits=0
 
     call add_to_output(power, power, 1, expression, output_expression, n, partition, qubits)
@@ -80,17 +80,17 @@ end subroutine power_expansion
 
 program precomp
     implicit none
-    real, dimension(:), allocatable :: output
+    real*8, dimension(:), allocatable :: output
     integer :: num_args, ix
     character(len=12), dimension(:), allocatable :: args
     integer :: int_args(2)
-    real, dimension(:), allocatable :: real_args
+    real*8, dimension(:), allocatable :: real_args
     interface
         subroutine power_expansion(n, expression, output_expression, power)
             integer, intent(in) :: power
             integer, intent(in) :: n
-            real, intent(in) :: expression(2**n)
-            real, intent(out) :: output_expression(2**n)
+            real*8, intent(in) :: expression(2**n)
+            real*8, intent(out) :: output_expression(2**n)
             integer :: qubits(n)
             
             integer :: partition(2**n)

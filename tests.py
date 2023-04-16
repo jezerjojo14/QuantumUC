@@ -17,8 +17,16 @@ from qiskit.quantum_info import Statevector
 
 from qiskit.opflow import PauliTrotterEvolution
 from qiskit.opflow import I, X, Y, Z
-
+# import os
+# import importlib
+# import matplotlib
+# importlib.reload(matplotlib)
+# matplotlib.use('Agg')
 from matplotlib import pyplot as plt
+
+# current_dir=os.getcwd()
+# final_dir=os.path.join(current_dir, "asin_m_dependence")
+# os.makedirs(final_dir, exist_ok=True)
 
 def asin_x_inv(x):
     try:
@@ -44,6 +52,9 @@ def plot_asin_x_inv(n, no_terms, x_scale):
     plt.plot([i/2**n for i in range(2**n)],y, label="Taylor approx")
     plt.plot([i/2**n for i in range(2**n)], [asin_x_inv(x_scale*i/2**n) for i in range(2**n)], label="Actual")
     plt.show()
+    # plt.savefig(os.path.join(final_dir, "plot_arcsin_x_inv__m_"+str(m)+".png"))
+    # plt.clf()
+    # plt.close('all')
 
 def hhl_test():
     # Create problem
@@ -101,8 +112,8 @@ def hhl_test():
     print(list(np.around(np.asarray(statevector),3)))
 
 
-def asin_circ_test():
-    asin_circ=construct_asin_x_inv_circuit(5, 4, 2, 5.536580568672519)
+def asin_circ_test(m=5.536580568672519):
+    asin_circ=construct_asin_x_inv_circuit(5, 4, 1, m)
     input_reg=QuantumRegister(5)
     ry_anc=QuantumRegister(1)
     qc=QuantumCircuit(input_reg, ry_anc)
@@ -307,6 +318,7 @@ def hhl_test_deep():
     J, P = linalg.eig(trot_exp_H)
     J=[np.log((el**(-1j)).real) for el in J]
     J=[el+2*np.pi*int(el<0) for el in J]
+    print("Eigenvalues of matrix:",J)
     
     L=np.array([[int(i==j)*J[i] for j in range(len(J))] for i in range(len(J))])
     H_rev_eng = P @ L @ linalg.inv(P)
@@ -345,12 +357,12 @@ def hhl_test_deep():
         #     qc.swap(qubit, n-qubit-1)
         for j in range(n):
             for m in range(j):
-                hhl_circ_temp.cp(-pi/float(2**(j-m)), hhl_phase_reg[m], hhl_phase_reg[j])
+                hhl_circ_temp.cp(-np.pi/float(2**(j-m)), hhl_phase_reg[m], hhl_phase_reg[j])
             hhl_circ_temp.h(hhl_phase_reg[j])
 
     qft_dagger(len(hhl_phase_reg))
 
-    print(hhl_circ_temp.draw())
+    # print(hhl_circ_temp.draw())
 
     hhl_circ.compose(hhl_circ_temp, inplace=True)
 
@@ -365,14 +377,17 @@ def hhl_test_deep():
 
     # Conditioned rotations
 
-    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,2,(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
+    m=(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)
+    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,1,m), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
     hhl_circ.x(hhl_anc[0])
-
+    print("Allowed eigenvalues between ",1/m, "and", m)
     # disp_subsyst_statevector(st4,[2,3])
 
     # Uncompute QPE to unentangle the ancillas
 
     hhl_circ.compose(hhl_circ_temp.inverse(), inplace=True)
+
+    print(hhl_circ.draw())
 
     st4 = Statevector.from_instruction(hhl_circ)
     print("ST4:")
@@ -401,10 +416,19 @@ def hhl_test_deep():
 
 # Run tests
 
-
-
-# plot_asin_x_inv(5,4,5.536580568672519)
 # Success
+# m=20
+# plot_asin_x_inv(5,4,m)
+
+# statevector=asin_circ_test(m)
+
+# plt.plot([i/32 for i in range(32)], [abs(el) for el in list(statevector)[32:]])
+# plt.plot([i/32 for i in range(32)], [1/(m*(x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
+# # plt.plot([i/32 for i in range(32)], [1/((x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
+# plt.show()
+# plt.savefig(os.path.join(final_dir, "plot_x_inv__m_"+str(m)+".png"))
+# plt.clf()
+# plt.close('all')
 
 
 # asin_circ_test()
@@ -417,12 +441,6 @@ def hhl_test_deep():
 # Approx
 # Actual answer is array([ 0.5  ,  0.375, -0.75 , -0.875])
 # [(0.03901843403928501-5.90736734281494e-15j), (0.019509217019644462-2.360912436517677e-15j), (-0.019509217019642477+3.1570750431305193e-15j), (-0.029263825529466245+3.910317383165953e-15j)]
-
-# statevector=asin_circ_test()
-
-# plt.plot(range(32), [abs(el) for el in list(statevector)[32:]])
-# plt.plot(range(32), [1/(x) if x!=0 else np.nan for x in range(32)])
-# plt.show()
 
 # [[ 3. -1.  0. -1.]
 #  [-1.  2. -1.  0.]
