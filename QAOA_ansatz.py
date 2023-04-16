@@ -31,7 +31,7 @@ def qft_rotations(circuit, n):
     # the next qubits (we reduced n by one earlier in the function)
     qft_rotations(circuit, n)
 
-def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,num_time_slices=3):
+def create_hhl_circ(real_powers,B,max_eigval,min_eigval,gen_nodes,tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc,num_time_slices=3):
 
     """
     Creates a quantum circuit to perform HHL.
@@ -39,7 +39,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
     real_powers (list | numpy.array): Contains real powers of all nodes
     B (list of lists | numpy.array with dimension 2): Susceptance matrix of all nodes
     max_eigval (float): Upper bound for maximum eigenvalue of B
-    C (float): Lower bound for minimum eigenvalue of B
+    min_eigval (float): Lower bound for minimum eigenvalue of B
     gen_nodes (QuantumRegister): Contains qubits each representing a generator node
     tot_nodes (QuantumRegister): Contains qubits where each basis state represents a node
     stat_prep_anc (QuantumRegister): Contains one qubit used to prepare the initial state
@@ -105,7 +105,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # Scale B such that the eigenvalues are scaled in such a way that the largest bitstring (111...111)
     # in the phase register represents the max of 1/C and max_eigval
-    B=B*2*pi*(2**(len(hhl_phase_reg)) - 1)/(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))
+    B=B*2*pi/max_eigval
 
     B=np.concatenate((B, np.zeros((extra_dim, len(list(B))))))
     B=np.concatenate((B, np.zeros((len(list(B)), extra_dim))), axis=1)
@@ -212,7 +212,7 @@ def create_hhl_circ(real_powers,B,max_eigval,C,gen_nodes,tot_nodes,state_prep_an
 
     # Conditioned rotations
 
-    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,2,(max(1/C, max_eigval)*(2**len(hhl_phase_reg)))/(2**(len(hhl_phase_reg)) - 1)), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
+    hhl_circ.compose(construct_asin_x_inv_circuit(len(hhl_phase_reg),4,2,max_eigval/min_eigval), [q for q in hhl_phase_reg]+[hhl_anc[0]], inplace=True)
     hhl_circ.x(hhl_anc[0])
 
     # Uncompute QPE to unentangle the ancillas
