@@ -17,16 +17,16 @@ from qiskit.quantum_info import Statevector
 
 from qiskit.opflow import PauliTrotterEvolution
 from qiskit.opflow import I, X, Y, Z
-# import os
-# import importlib
-# import matplotlib
-# importlib.reload(matplotlib)
-# matplotlib.use('Agg')
+import os
+import importlib
+import matplotlib
+importlib.reload(matplotlib)
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 
-# current_dir=os.getcwd()
-# final_dir=os.path.join(current_dir, "asin_m_dependence")
-# os.makedirs(final_dir, exist_ok=True)
+current_dir=os.getcwd()
+final_dir=os.path.join(current_dir, "asin_m_dependence")
+os.makedirs(final_dir, exist_ok=True)
 
 def asin_x_inv(x):
     try:
@@ -50,11 +50,15 @@ def plot_asin_x_inv(n, no_terms, x_scale):
                 y[i]+=term[0]
 
     plt.plot([i/2**n for i in range(2**n)],y, label="Taylor approx")
-    plt.plot([i/2**n for i in range(2**n)], [asin_x_inv(x_scale*i/2**n) for i in range(2**n)], label="Actual")
-    plt.show()
-    # plt.savefig(os.path.join(final_dir, "plot_arcsin_x_inv__m_"+str(m)+".png"))
-    # plt.clf()
-    # plt.close('all')
+    expected_plot=np.array([asin_x_inv(x_scale*i/2**n) for i in range(2**n)])
+    plt.plot([i/2**n for i in range(2**n)], expected_plot, label="Actual")
+    # plt.show()
+    bounds=(0,expected_plot[np.isfinite(expected_plot)].max()*1.3)
+    print(bounds)
+    plt.ylim(bounds)
+    plt.savefig(os.path.join(final_dir, "plot_arcsin_x_inv__m_"+str(m)+".png"))
+    plt.clf()
+    plt.close('all')
 
 def hhl_test():
     # Create problem
@@ -417,18 +421,24 @@ def hhl_test_deep():
 # Run tests
 
 # Success
-# m=20
-# plot_asin_x_inv(5,4,m)
+for m in range(70):
+    m+=2
+    plot_asin_x_inv(5,4,m)
 
-# statevector=asin_circ_test(m)
+    statevector=asin_circ_test(m)
 
-# plt.plot([i/32 for i in range(32)], [abs(el) for el in list(statevector)[32:]])
-# plt.plot([i/32 for i in range(32)], [1/(m*(x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
-# # plt.plot([i/32 for i in range(32)], [1/((x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
-# plt.show()
-# plt.savefig(os.path.join(final_dir, "plot_x_inv__m_"+str(m)+".png"))
-# plt.clf()
-# plt.close('all')
+    plt.plot([i/32 for i in range(32)], [abs(el) for el in list(statevector)[32:]])
+    expected_plot=np.array([1/(m*(x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
+    plt.plot([i/32 for i in range(32)], expected_plot)
+    # plt.plot([i/32 for i in range(32)], [1/((x/32)*2**(5/2)) if x!=0 else np.nan for x in range(32)])
+    # plt.show()
+    bounds=(0,expected_plot[np.isfinite(expected_plot)].max()*1.3)
+    print(bounds)
+    plt.ylim(bounds)
+    # plt.ylim((-1,max(expected_plot)))
+    plt.savefig(os.path.join(final_dir, "plot_x_inv__m_"+str(m)+".png"))
+    plt.clf()
+    plt.close('all')
 
 
 # asin_circ_test()
@@ -467,4 +477,4 @@ def hhl_test_deep():
 
 # [[-0.16570573-0.26528365j, -0.02045629+0.37106175j,  0.7047277 -0.35960324j, 0.02169489+0.3709914j, ] [ 0.06356696+0.36614823j, -0.04409058+0.24854458j,  0.3865175 +0.14947224j, 0.53688608-0.58154272j,] [ 0.7047277 -0.35960324j,  0.34296922+0.23261523j, -0.1444304 +0.09853308j,   0.36710477+0.19228058j,] [ 0.02169489+0.3709914j,   0.65397874-0.44581432j,  0.36710477+0.19228058j,  -0.04409058+0.24854458j,]]
 
-hhl_test_deep()
+# hhl_test_deep()
