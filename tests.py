@@ -163,7 +163,7 @@ def disp_subsyst_statevector(sv,target_qubits):
         for i in range(no_el):
             i=no_el-1-i
             sv=sv_list[i]
-            if sv[2]<0.03:
+            if sv[2]<0.003:
                 sv_list.pop(i)
                 no_change=False
                 continue
@@ -215,7 +215,12 @@ def hhl_test_deep():
     max_eigval=grid.A_eig_bounds[1]
     min_eigval=grid.A_eig_bounds[0]
     num_time_slices=5
-
+ 
+    real_powers_norm=np.linalg.norm(np.array(real_powers))
+ 
+    print("Actual solution:\n", linalg.inv(B) @ real_powers)
+    print("Predicted simulated sol_n:\n", (min_eigval/real_powers_norm)*(linalg.inv(B) @ real_powers))
+ 
     # Run code from create_hhl_circ
 
     print("Min_eigval:",min_eigval)
@@ -238,7 +243,6 @@ def hhl_test_deep():
     # Rescaling and resizing
 
     # Normalize the real_powers vector. This is the state we often call |b> when explaining HHL
-    real_powers_norm=np.linalg.norm(np.array(real_powers))
     real_powers=np.array(real_powers)/real_powers_norm
 
     # Number of extra dimensions we need to make our vector length a power of 2

@@ -66,7 +66,7 @@ def create_hhl_circ(real_powers,B,max_eigval,min_eigval,gen_nodes,tot_nodes,stat
     circuits_dir=os.path.join(current_dir, "circuits")
     
     # Key describing the circuit used in json file to identify circuits
-    circuit_key="HHL_"+str(real_powers)+"_"+str(B)+"_"+str(max_eigval)+"_"+str(C)+\
+    circuit_key="HHL_"+str(real_powers)+"_"+str(B)+"_"+str(max_eigval)+"_"+str(min_eigval)+\
                 "_"+str(len(hhl_phase_reg))+"_"+str(num_time_slices)
 
     print("Check if HHL circuit already exists")
@@ -252,7 +252,7 @@ def create_hhl_circ(real_powers,B,max_eigval,min_eigval,gen_nodes,tot_nodes,stat
 
 def create_QAOA_ansatz(
     timestep_count, gen_node_count, real_powers, hhl_phase_qubit_count, qadc_qubit_count,
-    running_costs, on_off_costs, line_costs, B, max_eigval, C,
+    running_costs, on_off_costs, line_costs, B, max_eigval, min_eigval,
     no_layers, consider_transmission_costs=True
     # gamma_values, beta_values
     ):
@@ -273,7 +273,7 @@ def create_QAOA_ansatz(
                                                                per unit time of the line connecting nodes i and j
     B (list of lists | numpy.array with dimension 2): Susceptance matrix of all nodes
     max_eigval (float): Upper bound for maximum eigenvalue of B
-    C (float): Lower bound for minimum eigenvalue of B
+    min_eigval (float): Lower bound for minimum eigenvalue of B
     no_layers (int): Number of layers in QAOA
 
     Returns:
@@ -294,7 +294,7 @@ def create_QAOA_ansatz(
     QAOA_circuit_key="QAOA_"+"_"+str(timestep_count)+"_"+str(gen_node_count)+"_"+str(real_powers)+\
             "_"+str(hhl_phase_qubit_count)+"_"+str(qadc_qubit_count)+"_"+str(running_costs)+\
             "_"+str(on_off_costs)+"_"+str(line_costs)+"_"+str(B)+"_"+str(max_eigval)+\
-            "_"+str(C)+"_"+str(consider_transmission_costs)
+            "_"+str(min_eigval)+"_"+str(consider_transmission_costs)
     
     circuit_ID=False
 
@@ -367,14 +367,14 @@ def create_QAOA_ansatz(
 
         if consider_transmission_costs:
             for t in range(timestep_count):
-                hhl_circ=create_hhl_circ([r[t] for r in real_powers],B,max_eigval,C,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
+                hhl_circ=create_hhl_circ([r[t] for r in real_powers],B,max_eigval,min_eigval,gen_nodes[0],tot_nodes,state_prep_anc,hhl_phase_reg,hhl_anc)
                 for i in range(node_count):
                     for j in range(i):
                         C_L=line_costs[i][j]
 
                         if C_L:
 
-                            exp_k_abs_cos_circuit=construct_exp_k_abs_cos_circuit(qadc_qubit_count,4,abs(B[i][j])*C_L*np.linalg.norm(np.array(real_powers))*params_temp[0])
+                            exp_k_abs_cos_circuit=construct_exp_k_abs_cos_circuit(qadc_qubit_count,4,abs(B[i][j])*C_L*(np.linalg.norm(np.array([r[t] for r in real_powers]))/min_eigval)*params_temp[0])
 
                             # Here we set the 0-th component of the statevector at the end of the hhl circuit to theta_i-theta_j
 
@@ -407,7 +407,7 @@ def create_QAOA_ansatz(
                             current_dir=os.getcwd()
                             circuits_dir=os.path.join(current_dir, "circuits")
                             
-                            circuit_key="QADC_"+str([r[t] for r in real_powers])+"_"+str(B)+"_"+str(max_eigval)+"_"+str(C)+\
+                            circuit_key="QADC_"+str([r[t] for r in real_powers])+"_"+str(B)+"_"+str(max_eigval)+"_"+str(min_eigval)+\
                                         "_"+str(len(hhl_phase_reg))+"_"+str(qadc_qubit_count)+"_"+str((i,j))
 
                             print("Check if QADC circuit already exists.")
