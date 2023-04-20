@@ -237,7 +237,7 @@ def create_hhl_circ(real_powers,B,max_eigval,min_eigval,gen_nodes,tot_nodes,stat
         print("Length of transpiled HHL", len(hhl_circ_transpiled))
         qpy_serialization.dump(hhl_circ_transpiled, fd)
 
-    return(hhl_circ)
+    return(hhl_circ_transpiled)
 
 
 
