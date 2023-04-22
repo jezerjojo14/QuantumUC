@@ -1,0 +1,36 @@
+date :
+Fri Apr 21 23:24:25 +03 2023
+directory
+/okyanus/users/afarea/QUC032023/quc21042023/quc/QuantumUC-main
+slurm NNODES: 1 , NTASK: 28 ,  ntask per node:  ,cpu per task: 
+
+['gen1', 'gen2', 'gen3', 'load2', 'load1']
+[[ 1.  -0.5 -0.5  0.   0. ]
+ [-0.5  1.   0.   0.  -0.5]
+ [-0.5  0.   2.  -0.5 -0.5]
+ [ 0.   0.  -0.5  1.  -0.5]
+ [ 0.  -0.5 -0.5 -0.5  1.5]]
+Check if QAOA circuit exists
+'QAOA__2_3_[[600, 222.18], [400, 277.819], [200, 200], [-200, -500], [-700, -900]]_4_4_[39616535, 12804052, 3364826]_[[1, 1, 1], [1, 1, 1]]_[[0. 1. 1. 0. 0.]\n [1. 0. 0. 0. 1.]\n [1. 0. 0. 1. 1.]\n [0. 0. 1. 0. 1.]\n [0. 1. 1. 1. 0.]]_[[ 1.  -0.5 -0.5  0.   0. ]\n [-0.5  1.   0.   0.  -0.5]\n [-0.5  0.   2.  -0.5 -0.5]\n [ 0.   0.  -0.5  1.  -0.5]\n [ 0.  -0.5 -0.5 -0.5  1.5]]_3.5_0.08018429778896063_True'
+Constructing QAOA Circuit
+Total number of qubits in our circuit: 20
+Check if HHL circuit already exists
+Circuit exists. Circuit ID: 2
+Constructing exp(ik|cos(x)|)
+Check if QADC circuit already exists.
+Exists. Circuit ID is 4
+Sat Apr 22 19:08:10 +03 2023
+print ==========================================
+             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+            674645   core40q     PINN   afarea  R   19:43:54      1 s217
+print SLURM_JOB_ID = 674645
+print SLURM_JOB_NODELIST = s217
+print SLURM_SUBMIT_HOST = sariyer
+print SLURM_SUBMIT_DIR = /okyanus/users/afarea/QUC032023/quc21042023/quc/QuantumUC-main
+print SLURM_JOB_NUM_NODES = 1
+print SLURM_CPUS_ON_NODE = 40
+print SLURM_NTASKS = 28
+print SLURM_NODEID = 0
+print ==========================================
+date: 
+Sat Apr 22 19:08:10 +03 2023
