@@ -81,8 +81,6 @@ class Grid:
         self.A=None
         self.time_step=0
         self.lines = lines
-        # nodes.sort(reverse=True, key=lambda node:node.real_power[0])
-        # nodes=[nodes[-1]]+nodes[:-1]
         self.nodes = nodes
         self.node_active = node_active
         if len(node_active)!=len(nodes):

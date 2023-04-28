@@ -23,6 +23,7 @@ import matplotlib
 importlib.reload(matplotlib)
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
+from sv_display import disp_subsyst_statevector
 
 current_dir=os.getcwd()
 final_dir=os.path.join(current_dir, "asin_m_dependence")
@@ -129,59 +130,6 @@ def asin_circ_test(m=5.536580568672519):
     result = backend.run(qc).result()
     statevector = result.get_statevector(qc)
     return statevector
-
-def get_subsyt_statevectors(sv, target_qubits):
-    # sv=list(np.around(np.asarray(sv),3))
-    sv=np.asarray(sv)
-    n=int(np.log2(len(sv)))
-    remaining_qubits=[i for i in range(n) if i not in target_qubits]
-    sv_list=[]
-    for i in range(2**len(remaining_qubits)):
-        sv_el=[]
-        active_remaining_qubits=[int(c) for c in str(bin(i))[2:][::-1]]
-        index_=sum([on*2**q_num for on,q_num in zip(active_remaining_qubits,remaining_qubits)])
-        for j in range(2**len(target_qubits)):
-            active_target_qubits=[int(c) for c in str(bin(j))[2:][::-1]]
-            index=index_+sum([on*2**q_num for on,q_num in zip(active_target_qubits,target_qubits)])
-            sv_el+=[sv[index]]
-        sv_el_norm=(sum([np.abs(el)**2 for el in sv_el]))**0.5
-        sv_el=np.array(sv_el)
-        first_el_phase=cmath.phase(sv_el[0])
-        sv_el=sv_el*cmath.exp(-first_el_phase*1j)
-        if sv_el_norm:
-            sv_el=sv_el/sv_el_norm
-        sv_list+=[[[i],sv_el,sv_el_norm**2]]
-
-    return sv_list
-
-def disp_subsyst_statevector(sv,target_qubits):
-    sv_list=get_subsyt_statevectors(sv, target_qubits)
-    n=int(np.log2(len(sv)))
-    no_change=True
-    while no_change:
-        no_el=len(sv_list)
-        for i in range(no_el):
-            i=no_el-1-i
-            sv=sv_list[i]
-            if sv[2]<0.003:
-                sv_list.pop(i)
-                no_change=False
-                continue
-            for j in range(i):
-                if np.allclose(sv_list[j][1],sv[1]):
-                    sv_list[j][0]+=sv[0]
-                    sv_list[j][0]=list(set(sv_list[j][0]))
-                    sv_list[j][2]+=sv[2]
-                    sv_list.pop(i)
-                    no_change=False
-                    break
-    sv_list.sort(key=lambda sv:sv[2])
-    for sv in sv_list:
-        print("When remaining qubits are in states", ",".join(["|"+(str(bin(ind))[2:]).zfill(n-len(target_qubits))+">" for ind in sv[0]]), " (probability=",sv[2],"),")
-        print("the statevector of qubits", ",".join([str(q) for q in target_qubits]), "is")
-        print(np.around(sv[1],3))
-            
-    
 
 def hhl_test_deep():
     # Create problem
@@ -452,37 +400,5 @@ def hhl_test_deep():
 # asin_circ_test()
 # Success
 
-
-# hhl_test()
-# Test failed. Answer is coming out as
-# [(0.685917997575626-1.2319469437860386e-13j), (0.3429589987878453-5.18633872628292e-14j), (-0.3429589987878187+6.504051088580612e-14j), (-0.5144384981817477+7.863900559078633e-14j)]
-# Approx
-# Actual answer is array([ 0.5  ,  0.375, -0.75 , -0.875])
-# [(0.03901843403928501-5.90736734281494e-15j), (0.019509217019644462-2.360912436517677e-15j), (-0.019509217019642477+3.1570750431305193e-15j), (-0.029263825529466245+3.910317383165953e-15j)]
-
-# [[ 3. -1.  0. -1.]
-#  [-1.  2. -1.  0.]
-#  [ 0. -1.  2. -1.]
-#  [-1.  0. -1.  2.]]
-
-# [ 2.   1.  -1.  -1.5]
-
-
-# [[-3.40454829+0.j  1.13484943+0.j  0.        +0.j  1.13484943+0.j]
-#  [ 1.13484943+0.j -2.26969886+0.j  1.13484943+0.j  0.        +0.j]
-#  [ 0.        +0.j  1.13484943+0.j -2.26969886+0.j  1.13484943+0.j]
-#  [ 1.13484943+0.j  0.        +0.j  1.13484943+0.j -2.26969886+0.j]]
-
-
-# [[-0.16342566-0.27164328j  0.01833781+0.37063308j  0.70230126-0.36175213j
-#    0.01833781+0.37063308j]
-#  [ 0.01833781+0.37063308j -0.04308225+0.2513932j   0.36948844+0.18975702j
-#    0.60029566-0.51415553j]
-#  [ 0.70230126-0.36175213j  0.36948844+0.18975702j -0.14508785+0.09898981j
-#    0.36948844+0.18975702j]
-#  [ 0.01833781+0.37063308j  0.60029566-0.51415553j  0.36948844+0.18975702j
-#   -0.04308225+0.2513932j ]]
-
-# [[-0.16570573-0.26528365j, -0.02045629+0.37106175j,  0.7047277 -0.35960324j, 0.02169489+0.3709914j, ] [ 0.06356696+0.36614823j, -0.04409058+0.24854458j,  0.3865175 +0.14947224j, 0.53688608-0.58154272j,] [ 0.7047277 -0.35960324j,  0.34296922+0.23261523j, -0.1444304 +0.09853308j,   0.36710477+0.19228058j,] [ 0.02169489+0.3709914j,   0.65397874-0.44581432j,  0.36710477+0.19228058j,  -0.04409058+0.24854458j,]]
 
 hhl_test_deep()
