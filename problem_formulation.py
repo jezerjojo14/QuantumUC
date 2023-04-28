@@ -266,7 +266,7 @@ class UCProblem:
 
 
         self.par_qaoa_circ=create_QAOA_ansatz(self.timestep_count, len(self.gen_nodes),
-        [node.real_power for node in self.nodes], 4, 4, [node.cost_prod for node in self.gen_nodes],
+        [node.real_power for node in self.nodes], 4, 7, [node.cost_prod for node in self.gen_nodes],
         [[node.cost_on for node in self.gen_nodes],[node.cost_off for node in self.gen_nodes]], line_costs,
         B, max_eigval, C, no_layers, consider_transmission_costs=consider_transmission_costs)
 
