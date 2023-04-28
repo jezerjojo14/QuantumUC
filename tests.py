@@ -302,14 +302,6 @@ def hhl_test_deep():
             # This order will be switched back after applying inverse qft
             hhl_circ_temp.append(CU, [hhl_phase_reg[len(hhl_phase_reg)-1-counting_qubit]]+[state_prep_anc[0]]+[q for q in tot_nodes])
         repetitions *= 2
-    
-    st2 = Statevector.from_instruction(hhl_circ)
-    print("ST2:")
-    disp_subsyst_statevector(st2,[2,3,4])
-    print()
-    print()
-    print()
-    print()
 
 
     def qft_dagger(n):
@@ -329,13 +321,13 @@ def hhl_test_deep():
     hhl_circ.compose(hhl_circ_temp, inplace=True)
 
     
-    st3 = Statevector.from_instruction(hhl_circ)
-    print("ST3:")
-    disp_subsyst_statevector(st3,[2,3,4])
-    print()
-    print()
-    print()
-    print()
+    # st2 = Statevector.from_instruction(hhl_circ)
+    # print("ST2:")
+    # disp_subsyst_statevector(st2,[2,3,4])
+    # print()
+    # print()
+    # print()
+    # print()
 
     # Conditioned rotations
 
@@ -349,9 +341,66 @@ def hhl_test_deep():
 
     # print(hhl_circ.draw())
 
+    st2 = Statevector.from_instruction(hhl_circ)
+    print("ST2:")
+    disp_subsyst_statevector(st2,[2,3],0,[3])
+    print()
+    print()
+    print()
+    print()
+
+
+    i=3
+    j=2
+
+    
+    # Here we set the 0-th component of the statevector at the end of the hhl circuit to theta_i-theta_j
+
+    # Move theta_i to 0th component of statevector, also update j accordingly to track the position of theta_j
+    for k in range(len(tot_nodes)):
+        # If k-th place in bitstring of i is 1
+        if i%(2**(k+1))>=2**k:
+            # then change it to a 0
+            hhl_circ.x(tot_nodes[k])
+
+            # If k-th place in bitstring of j was 1, note that the new j will have 0 there instead
+            if j%(2**(k+1))>=2**k:
+                j-=2**k
+            # If it was 0, then note that it will now have 1 there instead
+            else:
+                j+=2**k
+    # Set k to be the position of the most significant 1 in binary expansion of j
+    
+    k=len(tot_nodes)-1
+    while True:
+        # By the end of the loop, k is the largest integer such that j>=2**k
+        if j<2**k:
+            k-=1
+            continue
+        break
+    # Move theta_j to 2**k-th component
+    for l in range(k):
+        # If l-th digit of binary expansion of j is 1
+        if j%(2**(l+1))>=2**l:
+            hhl_circ.cx(tot_nodes[k],tot_nodes[l])
+
+
+    st3 = Statevector.from_instruction(hhl_circ)
+    print("ST3:")
+    disp_subsyst_statevector(st3,[2,3],0,[3])
+    print()
+    print()
+    print()
+    print()
+
+
+    hhl_circ.h(tot_nodes[k])
+    hhl_circ.x(tot_nodes[k])
+
+
     st4 = Statevector.from_instruction(hhl_circ)
     print("ST4:")
-    disp_subsyst_statevector(st4,[2,3])
+    disp_subsyst_statevector(st4,[2,3],0,[3])
     print()
     print()
     print()
