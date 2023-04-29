@@ -77,6 +77,7 @@ def print_opt_QAOA(params, number_of_sol=3):
 
 # def find_optimum_solution(initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):       
 def find_optimum_solution(initial_guess=np.array([0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
+# def find_optimum_solution(initial_guess=np.array([0.5,1,1,0.5])):       
     opt = SPSA(maxiter=1000)
     res=opt.minimize(est_QAOA_ansatz_cost, initial_guess)
     print(res)
