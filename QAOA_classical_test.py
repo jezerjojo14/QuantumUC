@@ -182,19 +182,19 @@ def print_opt_QAOA(params, P):
         x+=[problem_instance.compute_cost(bstring, True)]
         y+=[(abs(state[i])**2)]
     
-    plt.bar([b+"\n"+str(int(x_el)) for b,x_el in zip(np.array(bs)[np.argsort(np.array(x))], np.sort(np.array(x)))],np.array(y)[np.argsort(np.array(x))])
+    plt.bar([b+"\n$"+str(int(x_el)) for b,x_el in zip(np.array(bs)[np.argsort(np.array(x))], np.sort(np.array(x)))],np.array(y)[np.argsort(np.array(x))])
     plt.xticks(rotation='vertical')
     plt.show()
 
-# def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.33,0.66,1,1,0.66,0.33])):       
-def find_optimum_solution(initial_guess=np.array([599,599,399,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
+def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
+# def find_optimum_solution(initial_guess=np.array([599,599,399,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
 # def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.75,1.0,1.0,0.75])):
     
     bounds=[(150,600),(150,600),(100,400),(100,400),(50,600),(50,600)]
     bounds+=[(-np.inf,np.inf) for _ in range(len(initial_guess)-6)]
     opt = SPSA()
-    # res=opt.minimize(est_QAOA_ansatz_cost, initial_guess, bounds=bounds)
-    res=minimize(est_QAOA_ansatz_cost, initial_guess, method='SLSQP', bounds=bounds, options={'disp': True})
+    res=opt.minimize(est_QAOA_ansatz_cost, initial_guess, bounds=bounds)
+    # res=minimize(est_QAOA_ansatz_cost, initial_guess, method='COBYLA', bounds=bounds, options={'disp': True})
     print(res)
     P=(res.x)[:6]
     print("Optimum powers:", [int(p) for p in P])
