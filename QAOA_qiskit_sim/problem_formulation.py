@@ -254,6 +254,43 @@ class UCProblem:
         # print()
         return cost
     
+    def check_valid(self, bitstring, consider_transmission_costs=True):
+        bitstring=bitstring[::-1]
+        if len(bitstring.split()) != self.timestep_count:
+            print(bitstring)
+            print(self.timestep_count, self.gen_nodes)
+            raise
+
+        A=self.grid_timesteps.A
+        sol=bitstring.split()
+
+        # print(sol)
+        # print(sol)
+        for t in range(self.timestep_count):
+            if len(sol[t])!=len(self.gen_nodes):
+                raise
+            
+            gen_power=0
+            for i in range(len(self.gen_nodes)):
+                gen_power+=int(sol[t][i])*self.gen_nodes[i].real_power[t]
+            
+            demand=0
+            for i in range(len(self.nodes)-len(self.gen_nodes)):
+                i+=len(self.gen_nodes)
+                demand-=self.nodes[i].real_power[t]
+        
+            # print("t=",t)
+            # print("Power generated:", gen_power)
+            # print("Demand:", demand)
+            
+
+            if gen_power<demand:
+
+                return False
+        
+        return True
+    
+
 
     def compute_cost(self, bitstring, consider_transmission_costs=True):
         bitstring=bitstring[::-1]
