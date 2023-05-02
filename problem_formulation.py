@@ -223,7 +223,7 @@ class UCProblem:
                     penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.lines])
                 # print("Penalty")
                 # print("Cost before penalty:",cost)
-                cost+=2*penalty_cost
+                cost+=penalty_cost
                 # cost+=10**10+(10**5)*(demand-gen_power)
             
             
@@ -292,14 +292,14 @@ class UCProblem:
 
             if gen_power<demand:
 
-                # penalty_cost=sum([node.cost_prod[t] for node in self.gen_nodes])+ \
-                #     sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
-                # if consider_transmission_costs:
-                #     penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes]) for line in self.lines])
-                # # print("Penalty")
-                # # print("Cost before penalty:",cost)
-                # cost+=penalty_cost
-                cost+=1.5*10**10+(10**5)*(demand-gen_power)
+                penalty_cost=sum([node.cost_prod[t] for node in self.gen_nodes])+ \
+                    sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
+                if consider_transmission_costs:
+                    penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes]) for line in self.lines])
+                # print("Penalty")
+                # print("Cost before penalty:",cost)
+                cost+=penalty_cost*(1+(demand-gen_power)/2)
+                # cost+=1.5*10**10+(10**5)*(demand-gen_power)
             
             
             # if gen_power==0:

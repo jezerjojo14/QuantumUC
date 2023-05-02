@@ -13,70 +13,6 @@ gen3rc=[20,20,70]
 
 no_qubits=6
 
-# def compute_cost(self, bitstring, coeffs, f):
-#     bitstring=bitstring[::-1]
-#     if len(bitstring.split()) != self.timestep_count:
-#         print(bitstring)
-#         print(self.timestep_count, self.gen_nodes)
-#         raise
-
-#     cost=0
-#     A=self.grid_timesteps.A
-#     sol=bitstring.split()
-
-#     # print(sol)
-#     # print(sol)
-#     for t in range(self.timestep_count):
-#         if len(sol[t])!=len(self.gen_nodes):
-#             raise
-        
-#         gen_power=0
-#         for i in range(len(self.gen_nodes)):
-#             gen_power+=int(sol[t][i])*self.gen_nodes[i].real_power[t]
-#             cost+=int(sol[t][i])*f(coeffs[i],self.gen_nodes[i].real_power[t])
-#             if t<self.timestep_count-1:
-#                 cost+=int(sol[t][i])*(1-int(sol[(t+1)][i]))*self.gen_nodes[i].cost_off
-#                 cost+=int(sol[(t+1)][i])*(1-int(sol[t][i]))*self.gen_nodes[i].cost_on
-        
-#         demand=0
-#         for i in range(len(self.nodes)-len(self.gen_nodes)):
-#             i+=len(self.gen_nodes)
-#             demand-=self.nodes[i].real_power[t]
-    
-#         # print("t=",t)
-#         # print("Power generated:", gen_power)
-#         # print("Demand:", demand)
-        
-#         if gen_power<demand:
-
-#             penalty_cost=sum([node.cost_prod for node in self.gen_nodes])+ \
-#                 sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
-#             penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.grid_timesteps.lines])
-#             # print("Penalty")
-#             # print("Cost before penalty:",cost)
-#             cost+=penalty_cost
-        
-#         # print()
-
-
-#         self.grid_timesteps.set_timestep(t)
-#         self.grid_timesteps.set_active_nodes(sol[t])
-
-#         # b changes when timestep and active nodes change
-#         b=self.grid_timesteps.b
-#         A_inv=linalg.inv(A)
-#         x=A_inv @ b
-#         for p in range(len(x)):
-#             for q in range(p):
-#                 line=self.grid_timesteps.get_line_from_nodes(self.nodes[p], self.nodes[q])
-#                 if line:
-#                     cost+=line.cost_of_line*abs(line.susceptance*(x[p]-x[q]))
-        
-#     # print("Final cost:",cost)
-#     # print()
-#     # print()
-#     return cost
-
 def U_C(x,problem_instance):
 
     costs=[]
@@ -112,10 +48,9 @@ def QAOA_ansatz_sim(params,problem_instance):
         state = U_M(beta[l]) @ U_C(gamma[l],problem_instance) @ state
     return state
 
-def est_QAOA_ansatz_cost(params_tot):
-    print("Params:",params_tot)
-    P=params_tot[:6]
-    params=params_tot[6:]
+def est_QAOA_ansatz_cost(params):
+    print("Params:",params)
+    P=[600,600,400,400,600,600]
 
     f=lambda coeffs, p: coeffs[0]+coeffs[1]*p+coeffs[2]*p**2
     
@@ -186,27 +121,30 @@ def print_opt_QAOA(params, P):
     plt.xticks(rotation='vertical')
     plt.show()
 
-def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.3,0.6,1,1,0.6,0.3])):       
+# def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
 # def find_optimum_solution(initial_guess=np.array([599,599,399,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
 # def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.5,1.0,1.0,0.5])):
-# def find_optimum_solution(initial_guess=np.array([600,600,400,400,600,600, 0.5,1.0])):
-    
-    bounds=[(150,600),(150,600),(100,400),(100,400),(50,600),(50,600)]
+def find_optimum_solution(p=3):
+    initial_guess=[-(i+1)/p for i in range(p)]
+    initial_guess+=initial_guess[::-1]
+    initial_guess=[int(10*i)/10 for i in initial_guess]
+    # bounds=[(150,600),(150,600),(100,400),(100,400),(50,600),(50,600)]
     # bounds=[(600,600),(600,600),(400,400),(400,400),(600,600),(600,600)]
-    bounds+=[(-np.inf,np.inf) for _ in range(len(initial_guess)-6)]
-    # opt = SPSA()
+    # bounds+=[(-2,2) for _ in range(len(initial_guess)-6)]
+    bounds=[(-10,10) for _ in range(2*p)]
+    opt = SPSA()
     # res=opt.minimize(est_QAOA_ansatz_cost, initial_guess, bounds=bounds)
     res=minimize(est_QAOA_ansatz_cost, initial_guess, method='COBYLA', bounds=bounds, options={'disp': True})
     # res=brute(est_QAOA_ansatz_cost, bounds, Ns=5)
     print(res)
-    P=(res.x)[:6]
+    P=[600,600,400,400,600,600]
     print("Optimum powers:", [int(p) for p in P])
     # P=[min(max(p,bound[0]),bound[1]) for p,bound in zip(P,bounds[:6])]
     # print("Optimum powers bounded:", [int(p) for p in P])
     print("Running circuit with ideal parameters:")
     # x=list(P)+list(res.x)[6:]
     print("Cost is", est_QAOA_ansatz_cost(res.x))
-    print_opt_QAOA(res.x[6:],P)
+    print_opt_QAOA(res.x,P)
     print("Top three optimal solutions actual:")
 
 
