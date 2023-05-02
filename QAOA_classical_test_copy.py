@@ -124,21 +124,23 @@ def print_opt_QAOA(params, P):
 # def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
 # def find_optimum_solution(initial_guess=np.array([599,599,399,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
 # def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.5,1.0,1.0,0.5])):
-def find_optimum_solution(p=3):
+def find_optimum_solution(p=2):
     initial_guess=[-(i+1)/p for i in range(p)]
     initial_guess+=initial_guess[::-1]
-    initial_guess=[int(10*i)/10 for i in initial_guess]
+    initial_guess=[int(100*i)/100 for i in initial_guess]
     # bounds=[(150,600),(150,600),(100,400),(100,400),(50,600),(50,600)]
     # bounds=[(600,600),(600,600),(400,400),(400,400),(600,600),(600,600)]
     # bounds+=[(-2,2) for _ in range(len(initial_guess)-6)]
     bounds=[(-10,10) for _ in range(2*p)]
     opt = SPSA()
     # res=opt.minimize(est_QAOA_ansatz_cost, initial_guess, bounds=bounds)
-    res=minimize(est_QAOA_ansatz_cost, initial_guess, method='COBYLA', bounds=bounds, options={'disp': True})
+    # res=minimize(est_QAOA_ansatz_cost, initial_guess, method='COBYLA', bounds=bounds, options={'disp': True})
     # res=brute(est_QAOA_ansatz_cost, bounds, Ns=5)
+    res = lambda: None;
+    res.x= [-9.99999999,  4.99999999,  5.01297715, 10.09904565]
     print(res)
     P=[600,600,400,400,600,600]
-    print("Optimum powers:", [int(p) for p in P])
+    # print("Optimum powers:", [int(p) for p in P])
     # P=[min(max(p,bound[0]),bound[1]) for p,bound in zip(P,bounds[:6])]
     # print("Optimum powers bounded:", [int(p) for p in P])
     print("Running circuit with ideal parameters:")

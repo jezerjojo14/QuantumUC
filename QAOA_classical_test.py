@@ -87,7 +87,7 @@ def U_C(x,problem_instance):
         s=bin(i)[2:].zfill(no_qubits)
         # compute_cost method expects T bitstrings of size n with spaces in between 
         s=s[:3]+" "+s[3:]
-        costs+=[problem_instance.compute_cost_QAOA(s)]
+        costs+=[problem_instance.compute_cost_QAOA(s)/(10**8)]
 
     H_C=np.diag(np.array(costs))
     # print("H_C\n",H_C)
