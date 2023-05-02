@@ -222,7 +222,7 @@ class UCProblem:
                     penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.grid_timesteps.lines])
                 # print("Penalty")
                 # print("Cost before penalty:",cost)
-                cost+=penalty_cost
+                cost+=2*penalty_cost
             
             # print()
 

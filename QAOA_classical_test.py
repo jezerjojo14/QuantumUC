@@ -77,26 +77,7 @@ no_qubits=6
 #     # print()
 #     return cost
 
-def U_C(x,P):
-
-    f=lambda coeffs, p: coeffs[0]+coeffs[1]*p+coeffs[2]*p**2
-
-    node1=Node([P[0], P[1]], [f(gen1rc,P[0]),f(gen1rc,P[1])], 100000, 100000, "gen1")
-    node2=Node([P[2], P[3]], [f(gen2rc,P[2]),f(gen2rc,P[3])], 100000, 100000, "gen2")
-    node3=Node([P[4], P[5]], [f(gen3rc,P[4]),f(gen3rc,P[5])], 100000, 100000, "gen3")
-
-    node4=Node([-600,-200], 0,0,0, "load1")
-    node5=Node([-900,-500], 0,0,0, "load2")
-
-    line1=Line(node1,node3,0.5,10)
-    line2=Line(node2,node1,0.5,10)
-    line3=Line(node4,node2,0.5,10)
-    line4=Line(node4,node3,0.5,10)
-    line5=Line(node4,node5,0.5,10)
-    line6=Line(node5,node3,0.5,10)
-
-    problem_instance=UCProblem([line1,line2,line3,line4,line5,line6], [node1,node2,node3,node4,node5], 2)
-    # problem_instance.print_A()
+def U_C(x,problem_instance):
 
     costs=[]
 
@@ -122,21 +103,19 @@ def U_M(x):
         U_M=np.kron(U_M,RX(x))
     return U_M
 
-def QAOA_ansatz_sim(params,P):
+def QAOA_ansatz_sim(params,problem_instance):
     no_layers=len(params)//2
     gamma=params[:no_layers]
     beta=params[no_layers:]
     state=np.array([1 for _ in range(2**no_qubits)])*(1/(2**(no_qubits/2)))
     for l in range(no_layers):
-        state = U_M(beta[l]) @ U_C(gamma[l],P) @ state
+        state = U_M(beta[l]) @ U_C(gamma[l],problem_instance) @ state
     return state
 
 def est_QAOA_ansatz_cost(params_tot):
     print("Params:",params_tot)
     P=params_tot[:6]
     params=params_tot[6:]
-    state=QAOA_ansatz_sim(params,P)
-    cost=0
 
     f=lambda coeffs, p: coeffs[0]+coeffs[1]*p+coeffs[2]*p**2
     
@@ -156,6 +135,8 @@ def est_QAOA_ansatz_cost(params_tot):
 
     problem_instance=UCProblem([line1,line2,line3,line4,line5,line6], [node1,node2,node3,node4,node5], 2)
  
+    state=QAOA_ansatz_sim(params,problem_instance)
+    cost=0
     for i in range(len(state)):
         s=bin(i)[3:].zfill(no_qubits)
         bstring=s[:3]+" "+s[3:]
@@ -187,7 +168,7 @@ def print_opt_QAOA(params, P):
     problem_instance=UCProblem([line1,line2,line3,line4,line5,line6], [node1,node2,node3,node4,node5], 2)
  
 
-    state=QAOA_ansatz_sim(params,P)
+    state=QAOA_ansatz_sim(params,problem_instance)
     
     x=[]
     y=[]
@@ -201,24 +182,26 @@ def print_opt_QAOA(params, P):
         x+=[problem_instance.compute_cost(bstring, True)]
         y+=[(abs(state[i])**2)]
     
-    plt.bar([b+"\n"+str(x_el) for b,x_el in zip(np.array(bs)[np.argsort(np.array(x))], np.sort(np.array(x)))],np.array(y)[np.argsort(np.array(x))])
+    plt.bar([b+"\n"+str(int(x_el)) for b,x_el in zip(np.array(bs)[np.argsort(np.array(x))], np.sort(np.array(x)))],np.array(y)[np.argsort(np.array(x))])
+    plt.xticks(rotation='vertical')
     plt.show()
 
-# def find_optimum_solution(initial_guess=np.array([0.33,0.66,1,1,0.66,0.33])):       
-def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
-# def find_optimum_solution(initial_guess=np.array([0.5,1,1,0.5])):
+def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.33,0.66,1,1,0.66,0.33])):       
+# def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
+# def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.5,1,1,0.5])):
     
     bounds=[(150,600),(150,600),(100,400),(100,400),(50,600),(50,600)]
     bounds+=[(-np.inf,np.inf) for _ in range(len(initial_guess)-6)]
-    opt = SPSA(maxiter=1000)
+    opt = SPSA()
     res=opt.minimize(est_QAOA_ansatz_cost, initial_guess, bounds=bounds)
     print(res)
+    P=(res.x)[:6]
+    print("Optimum powers:", [int(p) for p in P])
     print("Running circuit with ideal parameters:")
     print("Cost is", est_QAOA_ansatz_cost(res.x))
-    print_opt_QAOA(res.x)
+    print_opt_QAOA(res.x[6:],P)
     print("Top three optimal solutions actual:")
 
-    P=(res.x)[:6]
 
     f=lambda coeffs, p: coeffs[0]+coeffs[1]*p+coeffs[2]*p**2
     
@@ -241,38 +224,38 @@ def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.25,
 
     problem_instance.print_opt()
 
-# find_optimum_solution()
+find_optimum_solution()
 
-x=[ 5.99698922e+02,  6.01318442e+02,  3.99685772e+02,  3.25799932e+02,
-  5.01449703e+02,  3.74333082e+02,  1.44790729e+00, -1.14851077e+00,
- -1.10611557e+00,  2.96375474e-01, -5.38251199e-01, -1.53817968e+00,
- -2.45662648e-01,  1.91695662e+00]
+# x=[ 5.99698922e+02,  6.01318442e+02,  3.99685772e+02,  3.25799932e+02,
+#   5.01449703e+02,  3.74333082e+02,  1.44790729e+00, -1.14851077e+00,
+#  -1.10611557e+00,  2.96375474e-01, -5.38251199e-01, -1.53817968e+00,
+#  -2.45662648e-01,  1.91695662e+00]
 
-P=(x)[:6]
-print("Optimum powers:", [int(p) for p in P])
-print("Running circuit with ideal parameters:")
-print("Cost is", est_QAOA_ansatz_cost(x))
-print_opt_QAOA(x[6:],P)
-print("Top three optimal solutions actual:")
-
-
-f=lambda coeffs, p: coeffs[0]+coeffs[1]*p+coeffs[2]*p**2
-
-node1=Node([P[0], P[1]], [f(gen1rc,P[0]),f(gen1rc,P[1])], 100000, 100000, "gen1")
-node2=Node([P[2], P[3]], [f(gen2rc,P[2]),f(gen2rc,P[3])], 100000, 100000, "gen2")
-node3=Node([P[4], P[5]], [f(gen3rc,P[4]),f(gen3rc,P[5])], 100000, 100000, "gen3")
-
-node4=Node([-600,-200], 0,0,0, "load1")
-node5=Node([-900,-500], 0,0,0, "load2")
-
-line1=Line(node1,node3,0.5,10)
-line2=Line(node2,node1,0.5,10)
-line3=Line(node4,node2,0.5,10)
-line4=Line(node4,node3,0.5,10)
-line5=Line(node4,node5,0.5,10)
-line6=Line(node5,node3,0.5,10)
-
-problem_instance=UCProblem([line1,line2,line3,line4,line5,line6], [node1,node2,node3,node4,node5], 2)
+# P=(x)[:6]
+# print("Optimum powers:", [int(p) for p in P])
+# print("Running circuit with ideal parameters:")
+# print("Cost is", est_QAOA_ansatz_cost(x))
+# print_opt_QAOA(x[6:],P)
+# print("Top three optimal solutions actual:")
 
 
-problem_instance.print_opt()
+# f=lambda coeffs, p: coeffs[0]+coeffs[1]*p+coeffs[2]*p**2
+
+# node1=Node([P[0], P[1]], [f(gen1rc,P[0]),f(gen1rc,P[1])], 100000, 100000, "gen1")
+# node2=Node([P[2], P[3]], [f(gen2rc,P[2]),f(gen2rc,P[3])], 100000, 100000, "gen2")
+# node3=Node([P[4], P[5]], [f(gen3rc,P[4]),f(gen3rc,P[5])], 100000, 100000, "gen3")
+
+# node4=Node([-600,-200], 0,0,0, "load1")
+# node5=Node([-900,-500], 0,0,0, "load2")
+
+# line1=Line(node1,node3,0.5,10)
+# line2=Line(node2,node1,0.5,10)
+# line3=Line(node4,node2,0.5,10)
+# line4=Line(node4,node3,0.5,10)
+# line5=Line(node4,node5,0.5,10)
+# line6=Line(node5,node3,0.5,10)
+
+# problem_instance=UCProblem([line1,line2,line3,line4,line5,line6], [node1,node2,node3,node4,node5], 2)
+
+
+# problem_instance.print_opt()
