@@ -180,6 +180,81 @@ class UCProblem:
         for sol in bitstrings[:number_of_sols]:
             print(sol, "Cost:", costs[sol])
 
+    def compute_cost_QAOA(self, bitstring, consider_transmission_costs=True):
+        bitstring=bitstring[::-1]
+        if len(bitstring.split()) != self.timestep_count:
+            print(bitstring)
+            print(self.timestep_count, self.gen_nodes)
+            raise
+
+        cost=0
+        A=self.grid_timesteps.A
+        sol=bitstring.split()
+
+        # print(sol)
+        # print(sol)
+        for t in range(self.timestep_count):
+            if len(sol[t])!=len(self.gen_nodes):
+                raise
+            
+            gen_power=0
+            for i in range(len(self.gen_nodes)):
+                gen_power+=int(sol[t][i])*self.gen_nodes[i].real_power[t]
+                cost+=int(sol[t][i])*self.gen_nodes[i].cost_prod[t]
+                if t<self.timestep_count-1:
+                    cost+=int(sol[t][i])*(1-int(sol[(t+1)][i]))*self.gen_nodes[i].cost_off
+                    cost+=int(sol[(t+1)][i])*(1-int(sol[t][i]))*self.gen_nodes[i].cost_on
+            
+            demand=0
+            for i in range(len(self.nodes)-len(self.gen_nodes)):
+                i+=len(self.gen_nodes)
+                demand-=self.nodes[i].real_power[t]
+        
+            # print("t=",t)
+            # print("Power generated:", gen_power)
+            # print("Demand:", demand)
+            
+
+            if gen_power<demand:
+
+                penalty_cost=sum([node.cost_prod[t] for node in self.gen_nodes])+ \
+                    sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
+                if consider_transmission_costs:
+                    penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.lines])
+                # print("Penalty")
+                # print("Cost before penalty:",cost)
+                cost+=2*penalty_cost
+                # cost+=10**10+(10**5)*(demand-gen_power)
+            
+            
+            # if gen_power==0:
+                # print([str(g) for g in self.gen_nodes])
+                # print("Demand:", demand)
+                # print("Penalty cost:", penalty_cost)
+            # print()
+
+
+            self.grid_timesteps.set_timestep(t)
+            self.grid_timesteps.set_active_nodes(sol[t])
+
+            if consider_transmission_costs:
+
+                # b changes when timestep and active nodes change
+                b=self.grid_timesteps.b
+                A_inv=linalg.inv(A)
+                x=A_inv @ b
+                for p in range(len(x)):
+                    for q in range(p):
+                        line=self.grid_timesteps.get_line_from_nodes(self.nodes[p], self.nodes[q])
+                        if line:
+                            cost+=line.cost_of_line*abs(line.susceptance*(x[p]-x[q]))
+            
+        # print("Final cost:",cost)
+        # print()
+        # print()
+        return cost
+    
+
     def compute_cost(self, bitstring, consider_transmission_costs=True):
         bitstring=bitstring[::-1]
         if len(bitstring.split()) != self.timestep_count:
@@ -214,16 +289,23 @@ class UCProblem:
             # print("Power generated:", gen_power)
             # print("Demand:", demand)
             
+
             if gen_power<demand:
 
-                penalty_cost=sum([node.cost_prod[t] for node in self.gen_nodes])+ \
-                    sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
-                if consider_transmission_costs:
-                    penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.grid_timesteps.lines])
-                # print("Penalty")
-                # print("Cost before penalty:",cost)
-                cost+=2*penalty_cost
+                # penalty_cost=sum([node.cost_prod[t] for node in self.gen_nodes])+ \
+                #     sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
+                # if consider_transmission_costs:
+                #     penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes]) for line in self.lines])
+                # # print("Penalty")
+                # # print("Cost before penalty:",cost)
+                # cost+=penalty_cost
+                cost+=1.5*10**10+(10**5)*(demand-gen_power)
             
+            
+            # if gen_power==0:
+                # print([str(g) for g in self.gen_nodes])
+                # print("Demand:", demand)
+                # print("Penalty cost:", penalty_cost)
             # print()
 
 

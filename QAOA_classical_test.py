@@ -1,7 +1,7 @@
 from problem_formulation import Node, Line, Grid, UCProblem
 import numpy as np
 from scipy import linalg
-from scipy.optimize import minimize
+from scipy.optimize import minimize, Bounds
 from qiskit.algorithms.optimizers import SPSA
 from matplotlib import pyplot as plt
 
@@ -87,7 +87,7 @@ def U_C(x,problem_instance):
         s=bin(i)[3:].zfill(no_qubits)
         # compute_cost method expects T bitstrings of size n with spaces in between 
         s=s[:3]+" "+s[3:]
-        costs+=[problem_instance.compute_cost(s)]
+        costs+=[problem_instance.compute_cost_QAOA(s)]
 
     H_C=np.diag(np.array(costs))
     # print("H_C\n",H_C)
@@ -186,18 +186,22 @@ def print_opt_QAOA(params, P):
     plt.xticks(rotation='vertical')
     plt.show()
 
-def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.33,0.66,1,1,0.66,0.33])):       
-# def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
-# def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.5,1,1,0.5])):
+# def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.33,0.66,1,1,0.66,0.33])):       
+def find_optimum_solution(initial_guess=np.array([599,599,399,326,500,373, 0.25,0.5,0.75,1,1,0.75,0.5,0.25])):       
+# def find_optimum_solution(initial_guess=np.array([600,600,400,326,500,373, 0.75,1.0,1.0,0.75])):
     
     bounds=[(150,600),(150,600),(100,400),(100,400),(50,600),(50,600)]
     bounds+=[(-np.inf,np.inf) for _ in range(len(initial_guess)-6)]
     opt = SPSA()
-    res=opt.minimize(est_QAOA_ansatz_cost, initial_guess, bounds=bounds)
+    # res=opt.minimize(est_QAOA_ansatz_cost, initial_guess, bounds=bounds)
+    res=minimize(est_QAOA_ansatz_cost, initial_guess, method='SLSQP', bounds=bounds, options={'disp': True})
     print(res)
     P=(res.x)[:6]
     print("Optimum powers:", [int(p) for p in P])
+    # P=[min(max(p,bound[0]),bound[1]) for p,bound in zip(P,bounds[:6])]
+    # print("Optimum powers bounded:", [int(p) for p in P])
     print("Running circuit with ideal parameters:")
+    # x=list(P)+list(res.x)[6:]
     print("Cost is", est_QAOA_ansatz_cost(res.x))
     print_opt_QAOA(res.x[6:],P)
     print("Top three optimal solutions actual:")
