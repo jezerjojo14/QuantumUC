@@ -21,7 +21,7 @@ class Node:
 
     instance_names=[]
 
-    def __init__(self, real_power, cost_prod=0, cost_on=0, cost_off=0, label=None):
+    def __init__(self, real_power, cost_prod, cost_on=0, cost_off=0, label=None):
 
         self.lines=[]
         self.real_power = real_power
@@ -49,6 +49,9 @@ class Node:
     def add_line(self, line):
         if line not in self.lines:
             self.lines+=[line]
+    
+    def __str__(self) -> str:
+        return self.label
 
 
 class Line:
@@ -196,8 +199,8 @@ class UCProblem:
             
             gen_power=0
             for i in range(len(self.gen_nodes)):
-                gen_power+=int(sol[t][i])*self.gen_nodes[i].real_power[0]
-                cost+=int(sol[t][i])*self.gen_nodes[i].cost_prod
+                gen_power+=int(sol[t][i])*self.gen_nodes[i].real_power[t]
+                cost+=int(sol[t][i])*self.gen_nodes[i].cost_prod[t]
                 if t<self.timestep_count-1:
                     cost+=int(sol[t][i])*(1-int(sol[(t+1)][i]))*self.gen_nodes[i].cost_off
                     cost+=int(sol[(t+1)][i])*(1-int(sol[t][i]))*self.gen_nodes[i].cost_on
@@ -213,10 +216,10 @@ class UCProblem:
             
             if gen_power<demand:
 
-                penalty_cost=sum([node.cost_prod for node in self.gen_nodes])+ \
+                penalty_cost=sum([node.cost_prod[t] for node in self.gen_nodes])+ \
                     sum([node.cost_on for node in self.gen_nodes]+[node.cost_off for node in self.gen_nodes])
                 if consider_transmission_costs:
-                    penalty_cost+=sum([line.cost_of_line*sum([node.real_power[0] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.grid_timesteps.lines])
+                    penalty_cost+=sum([line.cost_of_line*sum([node.real_power[t] for node in self.gen_nodes])/len(self.gen_nodes) for line in self.grid_timesteps.lines])
                 # print("Penalty")
                 # print("Cost before penalty:",cost)
                 cost+=penalty_cost
