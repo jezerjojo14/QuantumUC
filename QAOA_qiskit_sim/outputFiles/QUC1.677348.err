@@ -1,0 +1,47 @@
+Traceback (most recent call last):
+  File "problem_formulation2.py", line 386, in <module>
+    problem_instance.find_optimum_solution(consider_transmission_costs=True)
+  File "problem_formulation2.py", line 354, in find_optimum_solution
+    res=opt.minimize(self.estimate_circ_cost, initial_guess)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/site-packages/qiskit/algorithms/optimizers/spsa.py", line 512, in minimize
+    get_eta, get_eps = self.calibrate(fun, x0, max_evals_grouped=self._max_evals_grouped)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/site-packages/qiskit/algorithms/optimizers/spsa.py", line 333, in calibrate
+    losses = _batch_evaluate(loss, points, max_evals_grouped)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/site-packages/qiskit/algorithms/optimizers/spsa.py", line 724, in _batch_evaluate
+    return [
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/site-packages/qiskit/algorithms/optimizers/spsa.py", line 725, in <listcomp>
+    function(*point) if isinstance(point, tuple) else function(point) for point in points
+  File "problem_formulation2.py", line 285, in estimate_circ_cost
+    circ=self.get_QAOA_circuit_with_set_parameters(params)
+  File "problem_formulation2.py", line 280, in get_QAOA_circuit_with_set_parameters
+    self.create_and_store_QAOA_ansatz(int(len(params)/2), consider_transmission_costs)
+  File "problem_formulation2.py", line 268, in create_and_store_QAOA_ansatz
+    self.par_qaoa_circ=create_QAOA_ansatz(self.timestep_count, len(self.gen_nodes),
+  File "/okyanus/users/afarea/QUC032023/QUCApr292023/QuantumUC-main/QAOA_ansatz.py", line 226, in create_QAOA_ansatz
+    qc.compose(qadc_circ, [q for q in qadc_reg]+[q for q in gen_nodes[t]]+[q for q in tot_nodes]+[state_prep_anc[0]]+[q for q in hhl_phase_reg]+[hhl_anc[0]]+[qadc_anc[0]])
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/site-packages/qiskit/circuit/quantumcircuit.py", line 929, in compose
+    n_op = instr.operation.copy()
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/site-packages/qiskit/circuit/instruction.py", line 427, in copy
+    cpy = self.__deepcopy__()
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/site-packages/qiskit/circuit/controlledgate.py", line 241, in __deepcopy__
+    cpy._definition = copy.deepcopy(self._definition, _memo)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 230, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 146, in deepcopy
+    y = copier(x, memo)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 205, in _deepcopy_list
+    append(deepcopy(a, memo))
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 172, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 270, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/okyanus/users/afarea/anaconda3_2021/lib/python3.8/copy.py", line 176, in deepcopy
+    memo[d] = y
+MemoryError
+slurmstepd: error: *** JOB 677348 ON f006 CANCELLED AT 2023-04-30T13:10:16 ***
